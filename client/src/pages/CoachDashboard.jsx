@@ -55,10 +55,10 @@ const CoachDashboard = () => {
       </section>
 
       <section className="grid stats-grid">
-        <StatCard label="Total Groups" value={groups.length} />
+        <StatCard label="Total Groups" value={loading ? undefined : groups.length} />
         <StatCard
           label="Total Players"
-          value={groups.reduce((acc, group) => acc + (group.playerCount || 0), 0)}
+          value={loading ? undefined : groups.reduce((acc, group) => acc + (group.playerCount || 0), 0)}
           accent="#f97316"
         />
       </section>

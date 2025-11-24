@@ -12,8 +12,14 @@ const coachSchema = new Schema(
       trim: true,
     },
     email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true },
+    password: { type: String, required: true }, // Hashed password for authentication
+    displayPassword: { type: String }, // Plain text password for display (stored for admin to view)
     phone: { type: String, required: true },
+    sportType: { 
+      type: String, 
+      enum: ['basketball', 'football'], 
+      required: false 
+    },
     isActive: { type: Boolean, default: true },
     role: { type: String, enum: Object.values(USER_ROLES), default: USER_ROLES.COACH },
   },
@@ -32,9 +38,22 @@ coachSchema.pre('validate', function ensureCoachUsername() {
 });
 
 coachSchema.pre('save', async function hashPassword() {
-  if (this.isModified('password')) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+  // If password is being modified and it's not already hashed
+  if (this.isModified('password') && this.password) {
+    // Check if password is already hashed (bcrypt hash starts with $2a$ or $2b$)
+    const isAlreadyHashed = this.password.startsWith('$2a$') || this.password.startsWith('$2b$') || this.password.startsWith('$2y$');
+    
+    if (!isAlreadyHashed) {
+      // Store plain text password BEFORE hashing for display
+      // Only set displayPassword if it's not already explicitly set
+      if (!this.displayPassword) {
+        this.displayPassword = this.password;
+      }
+      // Hash the password for secure authentication
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+    // If password is already hashed, keep displayPassword as is (don't overwrite)
   }
 });
 

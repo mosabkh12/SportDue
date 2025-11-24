@@ -1,3 +1,7 @@
+// Track if warning has been shown to avoid repetition
+let testModeWarningShown = false;
+let twilioNotInstalledWarningShown = false;
+
 const sendPaymentReminder = async (phone, message) => {
   if (!phone) {
     throw new Error('Phone number is required to send reminders');
@@ -6,20 +10,22 @@ const sendPaymentReminder = async (phone, message) => {
   // Check if SMS is enabled first
   const smsEnabled = process.env.SMS_ENABLED === 'true';
 
-  // Debug: log current SMS_ENABLED status (remove this after testing)
-  // console.log('[DEBUG] SMS_ENABLED:', process.env.SMS_ENABLED, 'smsEnabled:', smsEnabled);
-
   // If SMS is not enabled, use test mode (don't try to use Twilio at all)
   if (!smsEnabled) {
     // Fallback to console logging (for development/testing)
-    console.log(`[SMS (TEST MODE) -> ${phone}]`);
-    console.log(`Message: ${message}`);
-    console.log(
-      '\n⚠️  SMS is in TEST MODE. To enable real SMS:',
-      '\n1. Get Twilio credentials from https://www.twilio.com',
-      '\n2. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to .env',
-      '\n3. Set SMS_ENABLED=true in .env\n'
-    );
+    console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
+    
+    // Only show warning once
+    if (!testModeWarningShown) {
+      console.log(
+        '\n⚠️  SMS is in TEST MODE (messages logged only). To enable real SMS:',
+        '\n   1. Get Twilio credentials from https://www.twilio.com',
+        '\n   2. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to .env',
+        '\n   3. Set SMS_ENABLED=true in .env\n'
+      );
+      testModeWarningShown = true;
+    }
+    
     return {
       success: true,
       phone,
@@ -55,9 +61,14 @@ const sendPaymentReminder = async (phone, message) => {
         twilio = Twilio(twilioAccountSid, twilioAuthToken);
       } catch (requireError) {
         // Twilio module not installed - fall back to test mode
-        console.log(`[SMS (TEST MODE) -> ${phone}] - Twilio module not installed`);
-        console.log(`Message: ${message}`);
-        console.log('\n⚠️  Install Twilio: npm install twilio\n');
+        console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
+        
+        // Only show warning once
+        if (!twilioNotInstalledWarningShown) {
+          console.log('\n⚠️  Twilio module not installed. Install it: npm install twilio\n');
+          twilioNotInstalledWarningShown = true;
+        }
+        
         return {
           success: true,
           phone,
@@ -82,7 +93,7 @@ const sendPaymentReminder = async (phone, message) => {
         to: formattedPhone,
       });
 
-      console.log(`[SMS SENT via Twilio -> ${formattedPhone}] Message SID: ${result.sid}`);
+      console.log(`✅ [SMS SENT] to ${formattedPhone} | SID: ${result.sid}`);
       return {
         success: true,
         sid: result.sid,
@@ -91,21 +102,26 @@ const sendPaymentReminder = async (phone, message) => {
         method: 'twilio',
       };
     } catch (error) {
-      console.error(`[SMS ERROR via Twilio -> ${phone}]`, error.message);
+      console.error(`❌ [SMS ERROR] to ${phone}: ${error.message}`);
       throw new Error(`Failed to send SMS: ${error.message}`);
     }
   } else {
     // SMS enabled but invalid credentials - fall back to test mode
-    console.log(`[SMS (TEST MODE) -> ${phone}] - SMS_ENABLED=true but invalid Twilio credentials`);
-    console.log(`Message: ${message}`);
-    console.log(
-      '\n⚠️  SMS is enabled but Twilio credentials are invalid or missing.',
-      '\nPlease check your .env file:',
-      '\n1. Ensure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER are set',
-      '\n2. Remove placeholder values (your_xxx_here)',
-      '\n3. Install Twilio: npm install twilio',
-      '\n4. Restart server\n'
-    );
+    console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
+    
+    // Only show warning once
+    if (!testModeWarningShown) {
+      console.log(
+        '\n⚠️  SMS_ENABLED=true but Twilio credentials are invalid or missing.',
+        '\n   Please check your .env file:',
+        '\n   1. Ensure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER are set',
+        '\n   2. Remove placeholder values (your_xxx_here)',
+        '\n   3. Install Twilio: npm install twilio',
+        '\n   4. Restart server\n'
+      );
+      testModeWarningShown = true;
+    }
+    
     return {
       success: true,
       phone,

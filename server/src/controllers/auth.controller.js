@@ -3,6 +3,7 @@ const catchAsync = require('../utils/catchAsync');
 const generateToken = require('../utils/generateToken');
 const Coach = require('../models/coach.model');
 const Admin = require('../models/admin.model');
+const Player = require('../models/player.model');
 const { USER_ROLES } = require('../config/constants');
 
 const sanitizeUser = (user) => ({
@@ -13,11 +14,24 @@ const sanitizeUser = (user) => ({
   role: user.role,
 });
 
+const sanitizePlayer = (player) => ({
+  id: player._id,
+  username: player.username,
+  fullName: player.fullName,
+  phone: player.phone,
+  role: player.role,
+  groupId: player.groupId,
+});
+
 const registerCoach = catchAsync(async (req, res, next) => {
-  const { username, email, password, phone } = req.body;
+  const { username, email, password, phone, sportType } = req.body;
 
   if (!username || !email || !password || !phone) {
     return next(new ApiError(400, 'Username, email, password, and phone are required'));
+  }
+
+  if (sportType && !['basketball', 'football'].includes(sportType)) {
+    return next(new ApiError(400, 'Sport type must be either "basketball" or "football"'));
   }
 
   const normalizedUsername = username.toLowerCase();
@@ -33,6 +47,7 @@ const registerCoach = catchAsync(async (req, res, next) => {
     email,
     password,
     phone,
+    sportType: sportType || null,
   });
   const token = generateToken({ id: coach._id, role: USER_ROLES.COACH });
 
@@ -112,9 +127,42 @@ const adminLogin = catchAsync(async (req, res, next) => {
   });
 });
 
+const playerLogin = catchAsync(async (req, res, next) => {
+  const identifier = (req.body.identifier || req.body.username || '').toLowerCase();
+  const { password } = req.body;
+
+  if (!identifier || !password) {
+    return next(new ApiError(400, 'Username and password are required'));
+  }
+
+  const player = await Player.findOne({ username: identifier });
+
+  if (!player) {
+    return next(new ApiError(401, 'Invalid credentials'));
+  }
+
+  if (!player.password) {
+    return next(new ApiError(401, 'Player account does not have login credentials'));
+  }
+
+  const isMatch = await player.comparePassword(password);
+
+  if (!isMatch) {
+    return next(new ApiError(401, 'Invalid credentials'));
+  }
+
+  const token = generateToken({ id: player._id, role: USER_ROLES.PLAYER });
+
+  res.json({
+    token,
+    player: sanitizePlayer(player),
+  });
+});
+
 module.exports = {
   registerCoach,
   coachLogin,
   adminLogin,
+  playerLogin,
 };
 

@@ -19,7 +19,13 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const role = await login(form);
-      navigate(role === 'admin' ? '/admin/dashboard' : '/coach/dashboard');
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'player') {
+        navigate('/player/dashboard');
+      } else {
+        navigate('/coach/dashboard');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -49,7 +55,7 @@ const LoginPage = () => {
             <input
               type="text"
               name="identifier"
-              placeholder="you@example.com or username"
+              placeholder="email, username, or player username"
               value={form.identifier}
               onChange={handleChange}
               required

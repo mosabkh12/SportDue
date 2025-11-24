@@ -4,6 +4,7 @@ const {
   updatePlayer,
   deletePlayer,
   listPlayerAttendance,
+  resetPlayerPassword,
 } = require('../controllers/player.controller');
 const {
   listPlayerPayments,
@@ -15,9 +16,11 @@ const router = express.Router();
 
 router.use(authenticate, requireRole(USER_ROLES.COACH));
 
-router.route('/:playerId').get(getPlayerDetails).put(updatePlayer).delete(deletePlayer);
+// Specific routes should come before general :playerId route
 router.route('/:playerId/payments').get(listPlayerPayments).post(createOrUpdatePayment);
 router.route('/:playerId/attendance').get(listPlayerAttendance);
+router.post('/:playerId/reset-password', resetPlayerPassword);
+router.route('/:playerId').get(getPlayerDetails).put(updatePlayer).delete(deletePlayer);
 
 module.exports = router;
 

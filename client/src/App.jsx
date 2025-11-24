@@ -7,6 +7,7 @@ import AttendancePage from './pages/AttendancePage.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminProfilePage from './pages/AdminProfilePage.jsx';
 import CoachProfilePage from './pages/CoachProfilePage.jsx';
+import PlayerDashboard from './pages/PlayerDashboard.jsx';
 import DashboardLayout from './layouts/DashboardLayout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import './App.css';
@@ -29,6 +30,12 @@ const App = () => (
       <Route element={<DashboardLayout />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/profile" element={<AdminProfilePage />} />
+      </Route>
+    </Route>
+
+    <Route element={<ProtectedRoute allowedRoles={['player']} />}>
+      <Route element={<DashboardLayout />}>
+        <Route path="/player/dashboard" element={<PlayerDashboard />} />
       </Route>
     </Route>
 

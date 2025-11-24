@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { handleApiError } from '../utils/errorHandler';
 
 const PlayerDetailsPage = () => {
   const { playerId } = useParams();
@@ -11,6 +12,8 @@ const PlayerDetailsPage = () => {
   const [error, setError] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ month: '', amountPaid: '', amountDue: '' });
   const [message, setMessage] = useState('');
+  const [resetPasswordCredentials, setResetPasswordCredentials] = useState(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -21,11 +24,16 @@ const PlayerDetailsPage = () => {
         apiClient.get(`/players/${playerId}/payments`),
         apiClient.get(`/players/${playerId}/attendance`),
       ]);
-      setPlayer(playerRes.data);
+      // Always include displayPassword when setting player
+      const playerData = playerRes.data;
+      if (!playerData.displayPassword && playerData.credentials?.password) {
+        playerData.displayPassword = playerData.credentials.password;
+      }
+      setPlayer(playerData);
       setPayments(paymentRes.data);
       setAttendance(attendanceRes.data || []);
     } catch (err) {
-      setError(err.message);
+      handleApiError(err, setError);
     } finally {
       setLoading(false);
     }
@@ -50,7 +58,7 @@ const PlayerDetailsPage = () => {
       setPaymentForm({ month: '', amountPaid: '', amountDue: '' });
       fetchData();
     } catch (err) {
-      setError(err.message);
+      handleApiError(err, setError);
     }
   };
 
@@ -62,7 +70,46 @@ const PlayerDetailsPage = () => {
       });
       setMessage('');
     } catch (err) {
-      setError(err.message);
+      handleApiError(err, setError);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setResettingPassword(true);
+    setError(null);
+    setResetPasswordCredentials(null);
+    try {
+      const response = await apiClient.post(`/players/${playerId}/reset-password`);
+      
+      // Get the password from response - check multiple places
+      const newPassword = response.data.displayPassword || response.data.credentials?.password;
+      
+      // Update player state immediately so password appears right away
+      if (newPassword) {
+        setPlayer(prev => ({
+          ...prev,
+          ...response.data,
+          displayPassword: newPassword, // Force update with new password
+          username: response.data.username || prev?.username
+        }));
+      }
+      
+      // Show success message with password
+      if (newPassword) {
+        setResetPasswordCredentials({
+          username: response.data.username || player?.username,
+          password: newPassword,
+        });
+      }
+      
+      // Refresh data after short delay to sync everything
+      setTimeout(() => {
+        fetchData();
+      }, 600);
+    } catch (err) {
+      handleApiError(err, (msg) => setError(msg || 'Failed to reset password'));
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -87,13 +134,124 @@ const PlayerDetailsPage = () => {
       </section>
 
       <section className="card">
-        <h3>Contact</h3>
-        <p className="text-muted">{player?.phone}</p>
-        <p>
-          Monthly fee: <strong>${player?.monthlyFee}</strong>
-        </p>
-        {player?.notes && <p>{player.notes}</p>}
+        <h3 style={{ color: 'white', marginBottom: '1.5rem' }}>Contact Information</h3>
+        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Phone:</label>
+            <p style={{ color: 'white', fontSize: '1rem' }}>{player?.phone}</p>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Username:</label>
+            {player?.username ? (
+              <code style={{ 
+                padding: '0.625rem 1rem', 
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                fontFamily: "'Monaco', 'Courier New', monospace",
+                display: 'inline-block',
+                fontWeight: '600',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                letterSpacing: '0.05em'
+              }}>{player.username}</code>
+            ) : (
+              <div>
+                <span className="text-muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>No username set</span>
+                <button
+                  className="btn btn--outline"
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={resettingPassword}
+                >
+                  {resettingPassword ? 'Generating...' : '🔑 Generate Login Credentials'}
+                </button>
+              </div>
+            )}
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Password:</label>
+            {player?.displayPassword ? (
+              <code style={{ 
+                padding: '0.625rem 1rem', 
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                fontFamily: "'Monaco', 'Courier New', monospace",
+                display: 'inline-block',
+                fontWeight: '700',
+                color: '#fff',
+                border: '2px solid rgba(245, 158, 11, 0.5)',
+                minWidth: '150px',
+                letterSpacing: '0.05em',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
+              }}>{player.displayPassword}</code>
+            ) : (
+              <div>
+                <span className="text-muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>No password set</span>
+                <button
+                  className="btn btn--outline"
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={resettingPassword}
+                >
+                  {resettingPassword ? 'Generating...' : '🔑 Generate Password'}
+                </button>
+              </div>
+            )}
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Monthly fee:</label>
+            <p style={{ color: 'white', fontSize: '1.25rem', fontWeight: '700' }}>${player?.monthlyFee}</p>
+          </div>
+          {player?.notes && (
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Notes:</label>
+              <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem', lineHeight: '1.6' }}>{player.notes}</p>
+            </div>
+          )}
+        </div>
+        {player?.username && (
+          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <button
+              className="btn btn--outline"
+              type="button"
+              onClick={handleResetPassword}
+              disabled={resettingPassword}
+            >
+              {resettingPassword ? 'Resetting...' : '🔑 Reset Player Password'}
+            </button>
+          </div>
+        )}
       </section>
+
+      {resetPasswordCredentials && (
+        <section className="success-banner animate-fade-in">
+          <h4>✓ Password updated successfully!</h4>
+          <p style={{ color: 'rgba(255, 255, 255, 0.9)', marginBottom: '1rem', fontWeight: '500' }}>New password has been set and is now visible above.</p>
+          <div style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(10px)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <p style={{ marginBottom: '0.75rem', fontSize: '0.95rem', color: 'white' }}>
+              <strong style={{ color: 'rgba(255, 255, 255, 0.9)', marginRight: '0.5rem' }}>Username:</strong>
+              <code style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontFamily: 'monospace' }}>{resetPasswordCredentials.username}</code>
+            </p>
+            <p style={{ fontSize: '0.95rem', color: 'white' }}>
+              <strong style={{ color: 'rgba(255, 255, 255, 0.9)', marginRight: '0.5rem' }}>New Password:</strong>
+              <code style={{ background: 'rgba(245, 158, 11, 0.3)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontFamily: 'monospace', fontWeight: '700', border: '1px solid rgba(245, 158, 11, 0.5)' }}>{resetPasswordCredentials.password}</code>
+            </p>
+          </div>
+          <button
+            className="btn btn--primary"
+            type="button"
+            onClick={() => {
+              setResetPasswordCredentials(null);
+            }}
+          >
+            Close
+          </button>
+        </section>
+      )}
 
       <section className="card">
         <h3>Record payment</h3>

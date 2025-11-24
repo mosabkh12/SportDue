@@ -27,11 +27,11 @@ const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = async (credentials) => {
+  const login = async (credentials, role = null) => {
     const attempt = async (endpoint) => {
       try {
         const { data } = await apiClient.post(endpoint, credentials);
-        const authenticatedUser = data.admin || data.coach;
+        const authenticatedUser = data.admin || data.coach || data.player;
         setUser(authenticatedUser);
         setToken(data.token);
         return authenticatedUser.role;
@@ -43,6 +43,26 @@ const AuthProvider = ({ children }) => {
       }
     };
 
+    // If role is specified, only try that role's endpoint
+    if (role === 'admin') {
+      const adminRole = await attempt('/auth/admin/login');
+      if (adminRole) return adminRole;
+      throw new Error('Invalid credentials');
+    }
+
+    if (role === 'coach') {
+      const coachRole = await attempt('/auth/coach/login');
+      if (coachRole) return coachRole;
+      throw new Error('Invalid credentials');
+    }
+
+    if (role === 'player') {
+      const playerRole = await attempt('/auth/player/login');
+      if (playerRole) return playerRole;
+      throw new Error('Invalid credentials');
+    }
+
+    // Otherwise, try all roles (admin, coach, player)
     const adminRole = await attempt('/auth/admin/login');
     if (adminRole) {
       return adminRole;
@@ -51,6 +71,11 @@ const AuthProvider = ({ children }) => {
     const coachRole = await attempt('/auth/coach/login');
     if (coachRole) {
       return coachRole;
+    }
+
+    const playerRole = await attempt('/auth/player/login');
+    if (playerRole) {
+      return playerRole;
     }
 
     throw new Error('Invalid credentials');

@@ -10,6 +10,9 @@ const navItemsByRole = {
     { to: '/admin/dashboard', label: 'Dashboard' },
     { to: '/admin/profile', label: 'Profile' },
   ],
+  player: [
+    { to: '/player/dashboard', label: 'Dashboard' },
+  ],
 };
 
 const DashboardLayout = () => {
