@@ -1,139 +1,92 @@
-// Track if warning has been shown to avoid repetition
-let testModeWarningShown = false;
-let twilioNotInstalledWarningShown = false;
+const { Vonage } = require('@vonage/server-sdk');
 
 const sendPaymentReminder = async (phone, message) => {
   if (!phone) {
     throw new Error('Phone number is required to send reminders');
   }
 
-  // Check if SMS is enabled first
+  // Check if SMS is enabled
   const smsEnabled = process.env.SMS_ENABLED === 'true';
-
-  // If SMS is not enabled, use test mode (don't try to use Twilio at all)
+  
   if (!smsEnabled) {
-    // Fallback to console logging (for development/testing)
+    // Test mode - just log the message
     console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
-    
-    // Only show warning once
-    if (!testModeWarningShown) {
-      console.log(
-        '\n⚠️  SMS is in TEST MODE (messages logged only). To enable real SMS:',
-        '\n   1. Get Twilio credentials from https://www.twilio.com',
-        '\n   2. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to .env',
-        '\n   3. Set SMS_ENABLED=true in .env\n'
-      );
-      testModeWarningShown = true;
-    }
-    
     return {
       success: true,
       phone,
       method: 'test',
-      message: 'SMS logged to console (Twilio not configured)',
+      message: 'SMS logged to console (SMS not enabled)',
     };
   }
 
-  // Only try to use Twilio if SMS is explicitly enabled
-  const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  // Get Vonage credentials
+  const vonageApiKey = process.env.VONAGE_API_KEY;
+  const vonageApiSecret = process.env.VONAGE_API_SECRET;
+  const vonageFromNumber = process.env.VONAGE_FROM_NUMBER || process.env.VONAGE_BRAND_NAME;
 
-  // Check if values are not placeholders/default values
-  const hasValidCredentials =
-    twilioAccountSid &&
-    twilioAuthToken &&
-    twilioPhoneNumber &&
-    !twilioAccountSid.includes('your_') &&
-    !twilioAuthToken.includes('your_') &&
-    !twilioPhoneNumber.includes('1234567890') &&
-    twilioAccountSid.trim().length > 10 &&
-    twilioAuthToken.trim().length > 10 &&
-    twilioPhoneNumber.trim().length > 5;
+  if (!vonageApiKey || !vonageApiSecret) {
+    throw new Error('Vonage credentials not configured. Set VONAGE_API_KEY and VONAGE_API_SECRET in .env');
+  }
 
-  // If Twilio credentials are valid, send real SMS
-  if (hasValidCredentials) {
-    try {
-      // Try to require Twilio - if it's not installed, catch the error
-      let twilio;
-      try {
-        const Twilio = require('twilio');
-        twilio = Twilio(twilioAccountSid, twilioAuthToken);
-      } catch (requireError) {
-        // Twilio module not installed - fall back to test mode
-        console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
-        
-        // Only show warning once
-        if (!twilioNotInstalledWarningShown) {
-          console.log('\n⚠️  Twilio module not installed. Install it: npm install twilio\n');
-          twilioNotInstalledWarningShown = true;
-        }
-        
+  try {
+    // Initialize Vonage client
+    const vonage = new Vonage({
+      apiKey: vonageApiKey,
+      apiSecret: vonageApiSecret,
+    });
+
+    // Normalize phone number (remove spaces, dashes, etc.)
+    let phoneNumber = phone.replace(/[\s\-\(\)]/g, '');
+
+    // Format phone number with country code
+    if (!phoneNumber.startsWith('+')) {
+      // Detect if Israeli number (starts with 05)
+      if (phoneNumber.startsWith('05') && phoneNumber.length === 10) {
+        // Israeli mobile number - convert to +972
+        phoneNumber = `+972${phoneNumber.substring(1)}`;
+      } else {
+        // Use default country code from env or default to +972 for Israel
+        const defaultCountryCode = process.env.DEFAULT_COUNTRY_CODE || '+972';
+        phoneNumber = `${defaultCountryCode}${phoneNumber}`;
+      }
+    }
+
+    // Send SMS via Vonage
+    const responseData = await vonage.sms.send({
+      to: phoneNumber,
+      from: vonageFromNumber || 'CoachPay',
+      text: message,
+    });
+
+    console.log(`📤 [VONAGE] Response:`, JSON.stringify(responseData, null, 2));
+
+    // Check if SMS was sent successfully
+    if (responseData.messages && responseData.messages.length > 0) {
+      const messageResult = responseData.messages[0];
+      
+      if (messageResult.status === '0' || messageResult.status === 0) {
+        console.log(`✅ [VONAGE SMS SENT] To: ${phoneNumber} | Message ID: ${messageResult['message-id'] || messageResult.messageId}`);
         return {
           success: true,
-          phone,
-          method: 'test',
-          message: 'SMS logged to console (Twilio module not installed)',
+          method: 'vonage',
+          phone: phoneNumber,
+          messageId: messageResult['message-id'] || messageResult.messageId,
+          status: messageResult.status,
+          message: 'SMS sent successfully via Vonage',
         };
+      } else {
+        const errorMessage = messageResult['error-text'] || messageResult.errorText || 'Unknown error';
+        throw new Error(`Vonage SMS failed: ${errorMessage}`);
       }
-
-      // Normalize phone number (remove spaces, dashes, etc.)
-      const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
-
-      // Ensure phone number starts with country code (if it doesn't already)
-      let formattedPhone = normalizedPhone;
-      if (!formattedPhone.startsWith('+')) {
-        // If phone doesn't start with +, add +1 for US (you may need to adjust this)
-        formattedPhone = `+1${formattedPhone}`;
-      }
-
-      const result = await twilio.messages.create({
-        body: message,
-        from: twilioPhoneNumber,
-        to: formattedPhone,
-      });
-
-      console.log(`✅ [SMS SENT] to ${formattedPhone} | SID: ${result.sid}`);
-      return {
-        success: true,
-        sid: result.sid,
-        status: result.status,
-        phone: formattedPhone,
-        method: 'twilio',
-      };
-    } catch (error) {
-      console.error(`❌ [SMS ERROR] to ${phone}: ${error.message}`);
-      throw new Error(`Failed to send SMS: ${error.message}`);
+    } else {
+      throw new Error('Vonage SMS failed: No response messages');
     }
-  } else {
-    // SMS enabled but invalid credentials - fall back to test mode
-    console.log(`📱 [TEST MODE] SMS to ${phone}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
-    
-    // Only show warning once
-    if (!testModeWarningShown) {
-      console.log(
-        '\n⚠️  SMS_ENABLED=true but Twilio credentials are invalid or missing.',
-        '\n   Please check your .env file:',
-        '\n   1. Ensure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER are set',
-        '\n   2. Remove placeholder values (your_xxx_here)',
-        '\n   3. Install Twilio: npm install twilio',
-        '\n   4. Restart server\n'
-      );
-      testModeWarningShown = true;
-    }
-    
-    return {
-      success: true,
-      phone,
-      method: 'test',
-      message: 'SMS logged to console (invalid Twilio credentials)',
-    };
+  } catch (error) {
+    console.error(`❌ [VONAGE SMS ERROR] to ${phone}: ${error.message}`);
+    throw new Error(`Failed to send SMS via Vonage: ${error.message}`);
   }
 };
 
 module.exports = {
   sendPaymentReminder,
 };
-
-
-

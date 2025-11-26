@@ -2,14 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { handleApiError } from '../utils/errorHandler';
+import { useNotifications } from '../context/NotificationContext';
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams();
+  const notifications = useNotifications();
   const [data, setData] = useState({ group: null, players: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ fullName: '', phone: '', monthlyFee: '', notes: '' });
-  const [groupSettings, setGroupSettings] = useState({ paymentDueDay: 1 });
+  const [groupSettings, setGroupSettings] = useState({ paymentDueDate: '' });
   const [reminderMonth, setReminderMonth] = useState('');
   const [reminderMessage, setReminderMessage] = useState('');
   const [sendingReminders, setSendingReminders] = useState(false);
@@ -48,11 +50,18 @@ const GroupDetailsPage = () => {
   // Set group settings when group data is loaded
   useEffect(() => {
     if (data.group) {
+      // Convert payment due day to a date format for the date picker
+      // Always use current month with the saved due day
+      const dueDay = data.group.paymentDueDay || 1;
+      const today = new Date();
+      // Create a date with the due day of current month (ensures it's always current month)
+      const dueDate = new Date(today.getFullYear(), today.getMonth(), dueDay);
+      const dateString = dueDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
       setGroupSettings({
-        paymentDueDay: data.group.paymentDueDay || 1,
+        paymentDueDate: dateString,
       });
       // Set default reminder month to current month
-      const today = new Date();
       const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
       setReminderMonth(currentMonth);
     }
@@ -97,19 +106,45 @@ const GroupDetailsPage = () => {
   };
 
   const handleUpdatePaymentDueDay = async () => {
+    if (!groupSettings.paymentDueDate) {
+      notifications.error('Please select a payment due date');
+      return;
+    }
+    
     try {
+      // Extract the day from the selected date
+      const selectedDate = new Date(groupSettings.paymentDueDate);
+      const day = selectedDate.getDate();
+      
+      // Validate day is between 1-31
+      if (day < 1 || day > 31) {
+        notifications.error('Please select a valid day (1-31)');
+        return;
+      }
+      
       await apiClient.put(`/groups/${groupId}`, {
-        paymentDueDay: Number(groupSettings.paymentDueDay),
+        paymentDueDay: day,
       });
+      notifications.success(`Payment due day set to the ${day}${day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of each month. Automatic reminders will be sent at 9:00 AM on this day.`);
+      
+      // Update the date picker to reflect current month with the new day
+      const today = new Date();
+      const updatedDate = new Date(today.getFullYear(), today.getMonth(), day);
+      setGroupSettings({
+        paymentDueDate: updatedDate.toISOString().split('T')[0],
+      });
+      
       fetchDetails();
       setError(null);
     } catch (err) {
       handleApiError(err, setError);
+      notifications.error(err.message || 'Failed to update payment due day');
     }
   };
 
   const handleSendGroupReminders = async () => {
     if (!reminderMonth) {
+      notifications.error('Please select a month');
       setError('Please select a month');
       return;
     }
@@ -122,10 +157,26 @@ const GroupDetailsPage = () => {
         month: reminderMonth,
         customMessage: reminderMessage || undefined,
       });
-      setReminderResult(response.data);
+      const result = response.data;
+      setReminderResult(result);
       setReminderMessage('');
+      
+      if (result.success) {
+        if (result.sent > 0) {
+          notifications.success(`Successfully sent ${result.sent} reminder${result.sent !== 1 ? 's' : ''} for ${result.month}`);
+        } else {
+          notifications.info(result.message || 'No reminders to send');
+        }
+        if (result.failed > 0) {
+          notifications.warning(`${result.failed} reminder${result.failed !== 1 ? 's' : ''} failed to send`);
+        }
+      } else {
+        notifications.error('Failed to send reminders');
+      }
     } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to send reminders';
       handleApiError(err, (msg) => setError(msg || 'Failed to send reminders'));
+      notifications.error(errorMsg);
     } finally {
       setSendingReminders(false);
     }
@@ -177,118 +228,188 @@ const GroupDetailsPage = () => {
 
       <section className="card">
         <div className="card__header">
-          <h3>Group settings</h3>
+          <h3>Group settings & Payment reminders</h3>
         </div>
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <p className="text-muted">{data.group?.description || 'No description'}</p>
-          <p>
-            Default fee: <strong>${data.group?.defaultMonthlyFee || 0}</strong>
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'flex-end',
-              flexWrap: 'wrap',
-              padding: '1rem',
-              backgroundColor: 'rgba(99, 102, 241, 0.05)',
-              borderRadius: '8px',
-              border: '1px solid rgba(99, 102, 241, 0.2)',
-            }}
-          >
-            <label style={{ flex: '1', minWidth: '200px' }}>
-              Payment due day
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={groupSettings.paymentDueDay}
-                onChange={(e) =>
-                  setGroupSettings((prev) => ({ ...prev, paymentDueDay: e.target.value }))
-                }
-                style={{ width: '100%' }}
-              />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
-                Day of the month when payment is due (1-31)
-              </small>
-            </label>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={handleUpdatePaymentDueDay}
-              style={{ marginBottom: '0' }}
-            >
-              Save due day
-            </button>
+        
+        <div style={{ display: 'grid', gap: '2rem' }}>
+          {/* Group Settings Section */}
+          <div>
+            <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              Group settings
+            </h4>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <p className="text-muted">{data.group?.description || 'No description'}</p>
+              <p>
+                Default fee: <strong>${data.group?.defaultMonthlyFee || 0}</strong>
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '1rem',
+                  alignItems: 'flex-end',
+                  flexWrap: 'wrap',
+                  padding: '1rem',
+                  backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                }}
+              >
+                <label style={{ flex: '1', minWidth: '200px' }}>
+                  Payment due day
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="date"
+                      value={groupSettings.paymentDueDate}
+                      onChange={(e) => {
+                        const selectedDate = e.target.value;
+                        // Ensure the selected date is in the current month
+                        const today = new Date();
+                        const selected = new Date(selectedDate);
+                        if (selected.getMonth() !== today.getMonth() || selected.getFullYear() !== today.getFullYear()) {
+                          // If user selected a different month, adjust to current month with same day
+                          const day = selected.getDate();
+                          const adjustedDate = new Date(today.getFullYear(), today.getMonth(), day);
+                          setGroupSettings((prev) => ({ ...prev, paymentDueDate: adjustedDate.toISOString().split('T')[0] }));
+                        } else {
+                          setGroupSettings((prev) => ({ ...prev, paymentDueDate: selectedDate }));
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                    Select a date in the current month. The day number (1-31) will be saved. Automatic reminders will be sent on this day each month at 9:00 AM.
+                  </small>
+                  {data.group?.paymentDueDay && (
+                    <div style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.75rem', 
+                      background: 'rgba(34, 197, 94, 0.1)', 
+                      borderRadius: '8px',
+                      border: '1px solid rgba(34, 197, 94, 0.3)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '1.2rem' }}>✓</span>
+                        <small style={{ color: '#22c55e', fontWeight: '600' }}>
+                          Automatic reminders set for the {data.group.paymentDueDay}{data.group.paymentDueDay === 1 ? 'st' : data.group.paymentDueDay === 2 ? 'nd' : data.group.paymentDueDay === 3 ? 'rd' : 'th'} of each month at 9:00 AM
+                        </small>
+                      </div>
+                      {(() => {
+                        const today = new Date();
+                        const currentDay = today.getDate();
+                        const dueDay = data.group.paymentDueDay;
+                        let nextReminderDate;
+                        
+                        if (currentDay < dueDay) {
+                          // This month
+                          nextReminderDate = new Date(today.getFullYear(), today.getMonth(), dueDay);
+                        } else {
+                          // Next month
+                          nextReminderDate = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+                        }
+                        
+                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                        const nextDateStr = `${monthNames[nextReminderDate.getMonth()]} ${nextReminderDate.getDate()}, ${nextReminderDate.getFullYear()}`;
+                        
+                        return (
+                          <small style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.8rem', display: 'block', marginTop: '0.25rem' }}>
+                            Next reminder: {nextDateStr} at 9:00 AM
+                          </small>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </label>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={handleUpdatePaymentDueDay}
+                  style={{ marginBottom: '0' }}
+                  disabled={!groupSettings.paymentDueDate}
+                >
+                  Save due date
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <section className="card">
-        <h3>Send payment reminders</h3>
-        <p className="text-muted" style={{ marginBottom: '1rem' }}>
-          Send SMS reminders to all unpaid players for a specific month. Only players who haven't fully paid will receive reminders.
-        </p>
-        <div className="grid form-grid">
-          <label>
-            Month
-            <input
-              type="month"
-              value={reminderMonth}
-              onChange={(e) => setReminderMonth(e.target.value)}
-              required
-            />
-          </label>
-          <label className="full-width">
-            Custom message (optional)
-            <textarea
-              rows={3}
-              placeholder="Leave empty to use default message. The message will include player name, amount due, amount paid, and remaining balance."
-              value={reminderMessage}
-              onChange={(e) => setReminderMessage(e.target.value)}
-            />
-          </label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button
-              className="btn btn--secondary"
-              type="button"
-              onClick={handleSendGroupReminders}
-              disabled={sendingReminders || !reminderMonth}
-            >
-              {sendingReminders ? 'Sending...' : '📧 Send reminders to unpaid players'}
-            </button>
+          {/* Divider */}
+          <div style={{ 
+            height: '1px', 
+            background: 'var(--border)', 
+            margin: '0.5rem 0' 
+          }} />
+
+          {/* Send Payment Reminders Section */}
+          <div>
+            <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              Send payment reminders
+            </h4>
+            <p className="text-muted" style={{ marginBottom: '1rem' }}>
+              Send SMS reminders to all unpaid players for a specific month. Only players who haven't fully paid will receive reminders.
+            </p>
+            <div className="grid form-grid">
+              <label>
+                Month
+                <input
+                  type="month"
+                  value={reminderMonth}
+                  onChange={(e) => setReminderMonth(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="full-width">
+                Custom message (optional)
+                <textarea
+                  rows={3}
+                  placeholder="Leave empty to use default message. The message will include player name, amount due, amount paid, and remaining balance."
+                  value={reminderMessage}
+                  onChange={(e) => setReminderMessage(e.target.value)}
+                />
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  className="btn btn--secondary"
+                  type="button"
+                  onClick={handleSendGroupReminders}
+                  disabled={sendingReminders || !reminderMonth}
+                >
+                  {sendingReminders ? 'Sending...' : '📧 Send reminders to unpaid players'}
+                </button>
+              </div>
+            </div>
+            {reminderResult && (
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  backgroundColor: reminderResult.success
+                    ? 'rgba(16, 185, 129, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${reminderResult.success ? '#10b981' : '#ef4444'}`,
+                }}
+              >
+                <p style={{ fontWeight: '600', color: reminderResult.success ? '#10b981' : '#ef4444' }}>
+                  {reminderResult.success
+                    ? `✓ Successfully sent ${reminderResult.sent} reminder${reminderResult.sent !== 1 ? 's' : ''} for ${reminderResult.month}`
+                    : 'Failed to send reminders'}
+                </p>
+                {reminderResult.failed > 0 && (
+                  <p className="text-muted" style={{ marginTop: '0.5rem' }}>
+                    {reminderResult.failed} reminder{reminderResult.failed !== 1 ? 's' : ''} failed to send
+                  </p>
+                )}
+                {reminderResult.message && (
+                  <p className="text-muted" style={{ marginTop: '0.5rem' }}>
+                    {reminderResult.message}
+                  </p>
+                )}
+              </div>
+            )}
+            {error && <p className="error-text" style={{ marginTop: '1rem' }}>{error}</p>}
           </div>
         </div>
-        {reminderResult && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '1rem',
-              borderRadius: '8px',
-              backgroundColor: reminderResult.success
-                ? 'rgba(16, 185, 129, 0.1)'
-                : 'rgba(239, 68, 68, 0.1)',
-              border: `1px solid ${reminderResult.success ? '#10b981' : '#ef4444'}`,
-            }}
-          >
-            <p style={{ fontWeight: '600', color: reminderResult.success ? '#10b981' : '#ef4444' }}>
-              {reminderResult.success
-                ? `✓ Successfully sent ${reminderResult.sent} reminder${reminderResult.sent !== 1 ? 's' : ''} for ${reminderResult.month}`
-                : 'Failed to send reminders'}
-            </p>
-            {reminderResult.failed > 0 && (
-              <p className="text-muted" style={{ marginTop: '0.5rem' }}>
-                {reminderResult.failed} reminder{reminderResult.failed !== 1 ? 's' : ''} failed to send
-              </p>
-            )}
-            {reminderResult.message && (
-              <p className="text-muted" style={{ marginTop: '0.5rem' }}>
-                {reminderResult.message}
-              </p>
-            )}
-          </div>
-        )}
-        {error && <p className="error-text" style={{ marginTop: '1rem' }}>{error}</p>}
       </section>
 
       {newPlayerCredentials && (

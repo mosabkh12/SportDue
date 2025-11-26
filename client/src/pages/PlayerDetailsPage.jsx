@@ -11,7 +11,6 @@ const PlayerDetailsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ month: '', amountPaid: '', amountDue: '' });
-  const [message, setMessage] = useState('');
   const [resetPasswordCredentials, setResetPasswordCredentials] = useState(null);
   const [resettingPassword, setResettingPassword] = useState(false);
 
@@ -57,18 +56,6 @@ const PlayerDetailsPage = () => {
       });
       setPaymentForm({ month: '', amountPaid: '', amountDue: '' });
       fetchData();
-    } catch (err) {
-      handleApiError(err, setError);
-    }
-  };
-
-  const handleSendReminder = async () => {
-    try {
-      await apiClient.post('/notifications/payment-reminder', {
-        playerId,
-        customMessage: message,
-      });
-      setMessage('');
     } catch (err) {
       handleApiError(err, setError);
     }
@@ -128,7 +115,7 @@ const PlayerDetailsPage = () => {
           <p className="eyebrow">Player</p>
           <h2>{player?.fullName || 'Player'}</h2>
           <p className="text-muted">
-            Payment history, attendance records, reminders, and quick notes live here.
+            Payment history, attendance records, and quick notes live here.
           </p>
         </div>
       </section>
@@ -421,21 +408,6 @@ const PlayerDetailsPage = () => {
             </div>
           </>
         )}
-      </section>
-
-      <section className="card">
-        <h3>Send reminder</h3>
-        <div className="grid form-grid">
-          <textarea
-            rows={3}
-            placeholder="Reminder message"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-          <button className="btn btn--secondary" type="button" onClick={handleSendReminder}>
-            Send SMS reminder
-          </button>
-        </div>
       </section>
     </div>
   );

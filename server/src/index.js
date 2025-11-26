@@ -2,11 +2,15 @@ require('dotenv').config();
 const http = require('http');
 const app = require('./app');
 const connectDB = require('./config/db');
+const { startScheduledReminders } = require('./services/schedulerService');
 
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
+
+  // Start scheduled payment reminders
+  startScheduledReminders();
 
   const server = http.createServer(app);
 
