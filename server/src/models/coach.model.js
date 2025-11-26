@@ -14,7 +14,7 @@ const coachSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true }, // Hashed password for authentication
     displayPassword: { type: String }, // Plain text password for display (stored for admin to view)
-    phone: { type: String, required: true },
+    phone: { type: String, required: true, maxlength: 20, trim: true },
     sportType: { 
       type: String, 
       enum: ['basketball', 'football'], 

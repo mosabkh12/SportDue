@@ -11,7 +11,8 @@ const GroupDetailsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ fullName: '', phone: '', monthlyFee: '', notes: '' });
-  const [groupSettings, setGroupSettings] = useState({ paymentDueDate: '' });
+  const [groupSettings, setGroupSettings] = useState({ paymentDueDate: '', defaultMonthlyFee: '' });
+  const [updatingFee, setUpdatingFee] = useState(false);
   const [reminderMonth, setReminderMonth] = useState('');
   const [reminderMessage, setReminderMessage] = useState('');
   const [sendingReminders, setSendingReminders] = useState(false);
@@ -60,6 +61,7 @@ const GroupDetailsPage = () => {
       
       setGroupSettings({
         paymentDueDate: dateString,
+        defaultMonthlyFee: data.group.defaultMonthlyFee || 0,
       });
       // Set default reminder month to current month
       const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -130,15 +132,40 @@ const GroupDetailsPage = () => {
       // Update the date picker to reflect current month with the new day
       const today = new Date();
       const updatedDate = new Date(today.getFullYear(), today.getMonth(), day);
-      setGroupSettings({
+      setGroupSettings((prev) => ({
+        ...prev,
         paymentDueDate: updatedDate.toISOString().split('T')[0],
-      });
+      }));
       
       fetchDetails();
       setError(null);
     } catch (err) {
       handleApiError(err, setError);
       notifications.error(err.message || 'Failed to update payment due day');
+    }
+  };
+
+  const handleUpdateDefaultFee = async () => {
+    const fee = parseFloat(groupSettings.defaultMonthlyFee);
+    
+    if (isNaN(fee) || fee < 0) {
+      notifications.error('Please enter a valid fee amount (must be 0 or greater)');
+      return;
+    }
+    
+    setUpdatingFee(true);
+    try {
+      await apiClient.put(`/groups/${groupId}`, {
+        defaultMonthlyFee: fee,
+      });
+      notifications.success(`Default monthly fee updated to $${fee.toFixed(2)}`);
+      fetchDetails();
+      setError(null);
+    } catch (err) {
+      handleApiError(err, setError);
+      notifications.error(err.message || 'Failed to update default fee');
+    } finally {
+      setUpdatingFee(false);
     }
   };
 
@@ -239,9 +266,45 @@ const GroupDetailsPage = () => {
             </h4>
             <div style={{ display: 'grid', gap: '1rem' }}>
               <p className="text-muted">{data.group?.description || 'No description'}</p>
-              <p>
-                Default fee: <strong>${data.group?.defaultMonthlyFee || 0}</strong>
-              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '1rem',
+                  alignItems: 'flex-end',
+                  flexWrap: 'wrap',
+                  padding: '1rem',
+                  backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                }}
+              >
+                <label style={{ flex: '1', minWidth: '200px' }}>
+                  Default monthly fee
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={groupSettings.defaultMonthlyFee}
+                    onChange={(e) => {
+                      setGroupSettings((prev) => ({ ...prev, defaultMonthlyFee: e.target.value }));
+                    }}
+                    placeholder="0.00"
+                    style={{ flex: 1 }}
+                  />
+                  <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                    This fee will be used as the default when adding new players to this group.
+                  </small>
+                </label>
+                <button
+                  className="btn btn--primary"
+                  type="button"
+                  onClick={handleUpdateDefaultFee}
+                  disabled={updatingFee || parseFloat(groupSettings.defaultMonthlyFee || 0) === parseFloat(data.group?.defaultMonthlyFee || 0)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {updatingFee ? 'Saving...' : 'Save fee'}
+                </button>
+              </div>
               <div
                 style={{
                   display: 'flex',
@@ -519,7 +582,14 @@ const GroupDetailsPage = () => {
           </label>
           <label>
             Phone
-            <input name="phone" value={form.phone} onChange={handleChange} required />
+            <input 
+              name="phone" 
+              value={form.phone} 
+              onChange={handleChange} 
+              required 
+              maxLength={20}
+              placeholder="0526867838 or +972526867838"
+            />
           </label>
           <label>
             Monthly fee

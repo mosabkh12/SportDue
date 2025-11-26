@@ -225,7 +225,8 @@ const AdminDashboard = () => {
               value={form.phone}
               onChange={handleFormChange}
               required
-              placeholder="+1234567890"
+              maxLength={20}
+              placeholder="0526867838 or +972526867838"
             />
           </label>
 
@@ -306,6 +307,8 @@ const AdminDashboard = () => {
                             value={editForm.phone}
                             onChange={handleEditFormChange}
                             required
+                            maxLength={20}
+                            placeholder="0526867838 or +972526867838"
                           />
                         </label>
                         <label>

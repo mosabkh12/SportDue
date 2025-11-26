@@ -29,6 +29,11 @@ const addPlayer = catchAsync(async (req, res, next) => {
     return next(new ApiError(400, 'Full name, phone, and monthly fee are required'));
   }
 
+  // Validate phone number length
+  if (phone && phone.trim().length > 20) {
+    return next(new ApiError(400, 'Phone number must be 20 characters or less'));
+  }
+
   await ensureGroupOwnership(req.params.groupId, req.user.id);
 
   // Generate simple password based on player name (e.g., "mosab123")
@@ -98,6 +103,11 @@ const updatePlayer = catchAsync(async (req, res, next) => {
 
   if (!Object.keys(updates).length) {
     return next(new ApiError(400, 'No valid fields provided'));
+  }
+
+  // Validate phone number length if being updated
+  if (updates.phone && updates.phone.trim().length > 20) {
+    return next(new ApiError(400, 'Phone number must be 20 characters or less'));
   }
 
   const player = await ensurePlayerOwnership(req.params.playerId, req.user.id);

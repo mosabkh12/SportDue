@@ -106,7 +106,14 @@ const CoachProfilePage = () => {
           </label>
           <label>
             Phone
-            <input name="phone" value={profile.phone} onChange={handleProfileChange} required />
+            <input 
+              name="phone" 
+              value={profile.phone} 
+              onChange={handleProfileChange} 
+              required 
+              maxLength={20}
+              placeholder="0526867838 or +972526867838"
+            />
           </label>
           <button className="btn btn--primary" type="submit">
             Save profile

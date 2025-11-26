@@ -44,6 +44,10 @@ const updateProfile = catchAsync(async (req, res, next) => {
   }
 
   if (typeof req.body.phone !== 'undefined') {
+    // Validate phone number length
+    if (req.body.phone && req.body.phone.trim().length > 20) {
+      return next(new ApiError(400, 'Phone number must be 20 characters or less'));
+    }
     coach.phone = req.body.phone;
     hasUpdates = true;
   }

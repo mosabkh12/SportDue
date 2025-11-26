@@ -30,6 +30,11 @@ const registerCoach = catchAsync(async (req, res, next) => {
     return next(new ApiError(400, 'Username, email, password, and phone are required'));
   }
 
+  // Validate phone number length
+  if (phone && phone.trim().length > 20) {
+    return next(new ApiError(400, 'Phone number must be 20 characters or less'));
+  }
+
   if (sportType && !['basketball', 'football'].includes(sportType)) {
     return next(new ApiError(400, 'Sport type must be either "basketball" or "football"'));
   }

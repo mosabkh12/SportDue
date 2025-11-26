@@ -6,7 +6,7 @@ const playerSchema = new Schema(
   {
     groupId: { type: Types.ObjectId, ref: 'Group', required: true },
     fullName: { type: String, required: true, trim: true },
-    phone: { type: String, required: true },
+    phone: { type: String, required: true, maxlength: 20, trim: true },
     monthlyFee: { type: Number, required: true },
     notes: { type: String },
     username: {
