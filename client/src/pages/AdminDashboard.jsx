@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../services/apiClient';
 import StatCard from '../components/StatCard.jsx';
+import { useNotifications } from '../context/NotificationContext';
 
 const AdminDashboard = () => {
+  const notifications = useNotifications();
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,8 +49,10 @@ const AdminDashboard = () => {
     try {
       await apiClient.patch(`/admin/coaches/${coachId}/toggle-active`);
       fetchCoaches();
+      notifications.success(`Coach ${isActive ? 'deactivated' : 'activated'} successfully.`);
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update coach status.');
     }
   };
 
@@ -64,8 +68,10 @@ const AdminDashboard = () => {
       await apiClient.post('/admin/coaches', form);
       setForm({ username: '', email: '', password: '', phone: '', sportType: 'basketball' });
       fetchCoaches();
+      notifications.success(`Coach "${form.username}" created successfully!`);
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to create coach.');
     } finally {
       setCreatingCoach(false);
     }
@@ -96,8 +102,10 @@ const AdminDashboard = () => {
       setEditingCoach(null);
       setEditForm({ username: '', email: '', phone: '', sportType: 'basketball', password: '' });
       fetchCoaches();
+      notifications.success(`Coach "${editForm.username}" updated successfully!`);
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update coach.');
     } finally {
       setUpdatingCoach(false);
     }
@@ -117,11 +125,14 @@ const AdminDashboard = () => {
     if (!deletingCoach) return;
     
     try {
+      const coachToDelete = coaches.find(c => c.id === deletingCoach);
       await apiClient.delete(`/admin/coaches/${deletingCoach}`);
       setDeletingCoach(null);
       fetchCoaches();
+      notifications.success(`Coach "${coachToDelete?.username || 'deleted'}" deleted successfully.`);
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to delete coach.');
       setDeletingCoach(null);
     }
   };
@@ -246,20 +257,21 @@ const AdminDashboard = () => {
         {!coaches.length && !loading ? (
           <p className="text-muted">No coaches yet.</p>
         ) : (
-          <table>
+          <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ minWidth: '1400px', width: '100%' }}>
             <thead>
               <tr>
-                <th></th>
-                <th>Username</th>
-                <th>Password</th>
-                <th>Email</th>
-                <th>Sport Type</th>
-                <th>Groups</th>
-                <th>Players</th>
-                <th>Revenue</th>
-                <th>Debt</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={{ width: '40px', minWidth: '40px' }}></th>
+                <th style={{ width: '120px', minWidth: '120px' }}>Username</th>
+                <th style={{ width: '130px', minWidth: '130px' }}>Password</th>
+                <th style={{ width: '180px', minWidth: '180px' }}>Email</th>
+                <th style={{ width: '140px', minWidth: '140px' }}>Sport Type</th>
+                <th style={{ width: '80px', minWidth: '80px' }}>Groups</th>
+                <th style={{ width: '80px', minWidth: '80px' }}>Players</th>
+                <th style={{ width: '110px', minWidth: '110px' }}>Revenue</th>
+                <th style={{ width: '110px', minWidth: '110px' }}>Debt</th>
+                <th style={{ width: '120px', minWidth: '120px' }}>Status</th>
+                <th style={{ width: '180px', minWidth: '180px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -373,46 +385,71 @@ const AdminDashboard = () => {
                       <td>{coach.email}</td>
                       <td>
                         {coach.sportType ? (
-                          <span style={{
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: '12px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.625rem',
+                            padding: '0.625rem 1rem',
+                            borderRadius: '16px',
+                            fontSize: '0.875rem',
+                            fontWeight: '700',
                             background: coach.sportType === 'basketball' 
-                              ? 'rgba(239, 68, 68, 0.2)' 
-                              : 'rgba(34, 197, 94, 0.2)',
+                              ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35))' 
+                              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.35))',
                             color: coach.sportType === 'basketball' 
                               ? '#ef4444' 
                               : '#22c55e',
-                            border: `1px solid ${coach.sportType === 'basketball' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`
-                          }}>
-                            {coach.sportType === 'basketball' ? '🏀 Basketball' : '⚽ Football'}
-                          </span>
+                            border: `2px solid ${coach.sportType === 'basketball' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
+                            boxShadow: coach.sportType === 'basketball' 
+                              ? '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
+                              : '0 4px 12px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            minWidth: '130px',
+                            justifyContent: 'center',
+                            transition: 'all 0.3s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = coach.sportType === 'basketball' 
+                              ? '0 6px 16px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)' 
+                              : '0 6px 16px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = coach.sportType === 'basketball' 
+                              ? '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
+                              : '0 4px 12px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                          }}
+                          >
+                            <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{coach.sportType === 'basketball' ? '🏀' : '⚽'}</span>
+                            <span>{coach.sportType === 'basketball' ? 'Basketball' : 'Football'}</span>
+                          </div>
                         ) : (
                           <span className="text-muted">Not set</span>
                         )}
                       </td>
-                      <td>{coach.groupCount}</td>
-                      <td>{coach.playerCount}</td>
-                      <td>${coach.totalReceived.toFixed(2)}</td>
-                      <td>${coach.totalDebt.toFixed(2)}</td>
-                      <td>
+                      <td style={{ textAlign: 'center' }}>{coach.groupCount}</td>
+                      <td style={{ textAlign: 'center' }}>{coach.playerCount}</td>
+                      <td style={{ textAlign: 'right' }}>${coach.totalReceived.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right' }}>${coach.totalDebt.toFixed(2)}</td>
+                      <td style={{ textAlign: 'center' }}>
                         <button
                           className="btn btn--outline"
                           type="button"
                           onClick={() => handleToggle(coach.id, coach.isActive)}
-                          style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                          style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
                         >
                           {coach.isActive ? 'Deactivate' : 'Activate'}
                         </button>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <td style={{ whiteSpace: 'nowrap', width: '180px' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap', justifyContent: 'flex-start', alignItems: 'center' }}>
                           <button
                             className="btn btn--outline"
                             type="button"
                             onClick={() => handleEditClick(coach)}
-                            style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                            style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', whiteSpace: 'nowrap', flexShrink: 0 }}
                           >
                             ✏️ Edit
                           </button>
@@ -424,7 +461,9 @@ const AdminDashboard = () => {
                               fontSize: '0.85rem', 
                               padding: '0.5rem 1rem',
                               color: '#ef4444',
-                              borderColor: 'rgba(239, 68, 68, 0.5)'
+                              borderColor: 'rgba(239, 68, 68, 0.5)',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0
                             }}
                           >
                             🗑️ Delete
@@ -669,7 +708,8 @@ const AdminDashboard = () => {
                 )
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </section>
 

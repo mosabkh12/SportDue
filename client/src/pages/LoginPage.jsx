@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { useNotifications } from '../context/NotificationContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const notifications = useNotifications();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,15 +21,21 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const role = await login(form);
-      if (role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (role === 'player') {
-        navigate('/player/dashboard');
-      } else {
-        navigate('/coach/dashboard');
-      }
+      notifications.success(`Welcome back! Successfully logged in as ${role}.`);
+      
+      // Small delay to show notification before navigation
+      setTimeout(() => {
+        if (role === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (role === 'player') {
+          navigate('/player/dashboard');
+        } else {
+          navigate('/coach/dashboard');
+        }
+      }, 300);
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

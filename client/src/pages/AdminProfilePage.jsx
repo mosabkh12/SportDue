@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../services/apiClient';
 import useAuth from '../hooks/useAuth';
+import { useNotifications } from '../context/NotificationContext';
 
 const AdminProfilePage = () => {
   const { updateUser } = useAuth();
+  const notifications = useNotifications();
   const [profile, setProfile] = useState({ username: '', email: '' });
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchProfile = async () => {
@@ -40,26 +41,26 @@ const AdminProfilePage = () => {
 
   const saveProfile = async (event) => {
     event.preventDefault();
-    setMessage(null);
     setError(null);
     try {
       const { data } = await apiClient.put('/admin/me', {
         username: profile.username,
       });
-      setMessage('Profile updated successfully.');
       updateUser(data);
+      notifications.success('Profile updated successfully!');
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update profile.');
     }
   };
 
   const changePassword = async (event) => {
     event.preventDefault();
-    setMessage(null);
     setError(null);
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setError('New password confirmation does not match.');
+      notifications.error('Password confirmation does not match.');
       return;
     }
 
@@ -67,10 +68,11 @@ const AdminProfilePage = () => {
       await apiClient.put('/admin/me', {
         newPassword: passwordForm.newPassword,
       });
-      setMessage('Password updated successfully.');
       setPasswordForm({ newPassword: '', confirmPassword: '' });
+      notifications.success('Password updated successfully!');
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update password.');
     }
   };
 
@@ -87,7 +89,6 @@ const AdminProfilePage = () => {
       <section className="card">
         <h2>Profile</h2>
         {loading && <p className="text-muted">Loading...</p>}
-        {message && <p className="text-muted">{message}</p>}
         {error && <p className="error-text">{error}</p>}
         <form className="grid form-grid" onSubmit={saveProfile}>
           <label>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../services/apiClient';
 import useAuth from '../hooks/useAuth';
+import { useNotifications } from '../context/NotificationContext';
 
 const CoachProfilePage = () => {
   const { updateUser } = useAuth();
+  const notifications = useNotifications();
   const [profile, setProfile] = useState({ username: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
@@ -44,27 +45,27 @@ const CoachProfilePage = () => {
 
   const saveProfile = async (event) => {
     event.preventDefault();
-    setMessage(null);
     setError(null);
     try {
       const { data } = await apiClient.put('/coach/me', {
         username: profile.username,
         phone: profile.phone,
       });
-      setMessage('Profile updated successfully.');
       updateUser(data);
+      notifications.success('Profile updated successfully!');
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update profile.');
     }
   };
 
   const changePassword = async (event) => {
     event.preventDefault();
-    setMessage(null);
     setError(null);
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setError('New password confirmation does not match.');
+      notifications.error('Password confirmation does not match.');
       return;
     }
 
@@ -72,10 +73,11 @@ const CoachProfilePage = () => {
       await apiClient.put('/coach/me', {
         newPassword: passwordForm.newPassword,
       });
-      setMessage('Password updated successfully.');
       setPasswordForm({ newPassword: '', confirmPassword: '' });
+      notifications.success('Password updated successfully!');
     } catch (err) {
       setError(err.message);
+      notifications.error(err.message || 'Failed to update password.');
     }
   };
 
@@ -92,7 +94,6 @@ const CoachProfilePage = () => {
       <section className="card">
         <h2>Profile</h2>
         {loading && <p className="text-muted">Loading...</p>}
-        {message && <p className="text-muted">{message}</p>}
         {error && <p className="error-text">{error}</p>}
         <form className="grid form-grid" onSubmit={saveProfile}>
           <label>
