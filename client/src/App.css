@@ -24,7 +24,7 @@
 }
 
 .layout__header h1.logo {
-  font-size: 1.75rem;
+  font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   display: flex;
@@ -33,8 +33,8 @@
 }
 
 .logo__icon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,7 +42,7 @@
   border-radius: 10px;
   color: white;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
   position: relative;
   overflow: hidden;
@@ -85,8 +85,8 @@
 .nav-link {
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.65rem 1.5rem;
+  font-size: 1.15rem;
+  padding: 0.75rem 1.75rem;
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -313,7 +313,7 @@
   border-radius: 16px;
   padding: 0.875rem 2rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;

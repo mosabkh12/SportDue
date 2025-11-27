@@ -424,7 +424,7 @@ const PlayerDetailsPage = () => {
       <section className="card">
         <div className="card__header">
           <h3>Record Payment</h3>
-          <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+          <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
             Record a new payment transaction for this team member
           </p>
         </div>
@@ -493,7 +493,7 @@ const PlayerDetailsPage = () => {
         <div className="card__header">
           <h3>Payment History</h3>
           {!loading && payments.length > 0 && (
-            <span className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+            <span className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.25rem' }}>
               {payments.length} {payments.length === 1 ? 'payment' : 'payments'} recorded
             </span>
           )}

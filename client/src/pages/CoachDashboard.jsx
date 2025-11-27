@@ -74,7 +74,7 @@ const CoachDashboard = () => {
       <section className="card">
         <div className="card__header">
           <h3>Create New Training Group</h3>
-          <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Set up a new training group with default payment settings.</p>
+          <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>Set up a new training group with default payment settings.</p>
         </div>
         <form className="grid form-grid" onSubmit={handleSubmit}>
           <label>
@@ -99,7 +99,7 @@ const CoachDashboard = () => {
               min="0"
               placeholder="0.00"
             />
-            <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+            <small className="text-muted" style={{ fontSize: '1rem', display: 'block', marginTop: '0.25rem', lineHeight: '1.5' }}>
               This will be the default fee for new players in this group
             </small>
           </label>
@@ -144,7 +144,7 @@ const CoachDashboard = () => {
                   <p className="group-info-text">
                     Default Monthly Fee: <strong className="group-info-strong">${(group.defaultMonthlyFee || 0).toFixed(2)}</strong>
                   </p>
-                  <p className="group-info-text" style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>
+                  <p className="group-info-text" style={{ margin: '0.5rem 0 0 0', fontSize: '1rem' }}>
                     Players: <strong>{group.playerCount || 0}</strong>
                   </p>
                 </div>

@@ -313,58 +313,37 @@ const GroupDetailsPage = () => {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gap: '1.5rem' }}>
+        <div className="grid" style={{ gap: '1.5rem' }}>
           {/* Quick Stats */}
           <section className="card">
             <div className="card__header">
               <h3>📊 Group Overview</h3>
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
                 Quick overview of your training group statistics and key information
               </p>
             </div>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '1rem',
-              marginTop: '1rem'
-            }}>
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                transition: 'transform 0.2s ease'
-              }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: '700', color: '#3b82f6', marginBottom: '0.5rem' }}>
+            <div className="overview-stats-grid">
+              <div className="stat-box stat-box--blue">
+                <div className="stat-value stat-value--blue">
                   {data.players.length}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                <div className="stat-label">
                   Active Members
                 </div>
               </div>
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid rgba(34, 197, 94, 0.3)'
-              }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: '700', color: '#22c55e', marginBottom: '0.5rem' }}>
+              <div className="stat-box stat-box--green">
+                <div className="stat-value stat-value--green">
                   ${data.group?.defaultMonthlyFee ? data.group.defaultMonthlyFee.toFixed(2) : '0.00'}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                <div className="stat-label">
                   Default Monthly Fee
                 </div>
               </div>
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid rgba(245, 158, 11, 0.3)'
-              }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
+              <div className="stat-box stat-box--yellow">
+                <div className="stat-value stat-value--yellow">
                   {data.group?.paymentDueDay || 'N/A'}
                 </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                <div className="stat-label">
                   Payment Due Day
                 </div>
               </div>
@@ -376,54 +355,35 @@ const GroupDetailsPage = () => {
             <div className="card__header">
               <h3>ℹ️ Group Information</h3>
             </div>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="grid" style={{ gap: '1rem' }}>
               {data.group?.description && (
-                <div style={{ 
-                  padding: '1.5rem', 
-                  backgroundColor: 'rgba(99, 102, 241, 0.05)', 
-                  borderRadius: '12px', 
-                  border: '1px solid rgba(99, 102, 241, 0.2)'
-                }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                <div className="info-box">
+                  <div className="info-label">
                     Description
                   </div>
-                  <p className="text-muted" style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>
+                  <p className="text-muted" style={{ margin: 0, fontSize: '1.1rem', lineHeight: '1.7' }}>
                     {data.group.description}
                   </p>
                 </div>
               )}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                gap: '1rem'
-              }}>
-                <div style={{ 
-                  padding: '1.25rem', 
-                  backgroundColor: 'rgba(17, 24, 39, 0.4)', 
-                  borderRadius: '10px',
-                  border: '1px solid rgba(55, 65, 81, 0.5)'
-                }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+              <div className="info-grid">
+                <div className="info-item">
+                  <div className="info-item-label">
                     Default Monthly Fee
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  <div className="info-item-value">
                     ${data.group?.defaultMonthlyFee ? data.group.defaultMonthlyFee.toFixed(2) : '0.00'}
                   </div>
                 </div>
-                <div style={{ 
-                  padding: '1.25rem', 
-                  backgroundColor: 'rgba(17, 24, 39, 0.4)', 
-                  borderRadius: '10px',
-                  border: '1px solid rgba(55, 65, 81, 0.5)'
-                }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                <div className="info-item">
+                  <div className="info-item-label">
                     Payment Due Day
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  <div className="info-item-value">
                     {data.group?.paymentDueDay ? `${data.group.paymentDueDay}${data.group.paymentDueDay === 1 ? 'st' : data.group.paymentDueDay === 2 ? 'nd' : data.group.paymentDueDay === 3 ? 'rd' : 'th'}` : 'Not Set'} of Each Month
                   </div>
                   {data.group?.paymentDueDay && (
-                    <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '0.5rem' }}>
+                    <div className="info-item-note">
                       Automated reminders at 9:00 AM
                     </div>
                   )}
@@ -439,25 +399,18 @@ const GroupDetailsPage = () => {
         <section className="card">
           <div className="card__header">
             <h3>⚙️ Group Configuration</h3>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
               Configure billing parameters and automated notification schedules for your training group
             </p>
           </div>
           
-          <div style={{ display: 'grid', gap: '2rem' }}>
-            <div
-              style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-              }}
-            >
-              <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="grid" style={{ gap: '2rem' }}>
+            <div className="config-section">
+              <h4 className="config-section-title">
                 💰 Default Monthly Fee
               </h4>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <label style={{ flex: '1', minWidth: '250px' }}>
+              <div className="config-form-row">
+                <label className="config-form-input">
                   <input
                     type="number"
                     min="0"
@@ -467,37 +420,28 @@ const GroupDetailsPage = () => {
                       setGroupSettings((prev) => ({ ...prev, defaultMonthlyFee: e.target.value }));
                     }}
                     placeholder="0.00"
-                    style={{ width: '100%' }}
                   />
-                  <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
+                  <small className="text-muted" style={{ fontSize: '1rem', display: 'block', marginTop: '0.5rem', lineHeight: '1.5' }}>
                     This amount will serve as the default monthly fee when registering new team members
                   </small>
                 </label>
                 <button
-                  className="btn btn--primary"
+                  className="btn btn--primary btn-config"
                   type="button"
                   onClick={handleUpdateDefaultFee}
                   disabled={updatingFee || parseFloat(groupSettings.defaultMonthlyFee || 0) === parseFloat(data.group?.defaultMonthlyFee || 0)}
-                  style={{ whiteSpace: 'nowrap', minWidth: '140px' }}
                 >
                   {updatingFee ? 'Updating...' : '💾 Update Fee'}
                 </button>
               </div>
             </div>
 
-            <div
-              style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-              }}
-            >
-              <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="config-section">
+              <h4 className="config-section-title">
                 📅 Payment Due Date
               </h4>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <label style={{ flex: '1', minWidth: '250px' }}>
+              <div className="config-form-row">
+                <label className="config-form-input">
                   <input
                     type="date"
                     value={groupSettings.paymentDueDate}
@@ -513,22 +457,15 @@ const GroupDetailsPage = () => {
                         setGroupSettings((prev) => ({ ...prev, paymentDueDate: selectedDate }));
                       }
                     }}
-                    style={{ width: '100%' }}
                   />
-                  <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
+                  <small className="text-muted" style={{ fontSize: '1rem', display: 'block', marginTop: '0.5rem', lineHeight: '1.5' }}>
                     Select any date within the current month to set the payment due day. This day will be used monthly for automated billing reminders sent at 9:00 AM.
                   </small>
                   {data.group?.paymentDueDay && (
-                    <div style={{ 
-                      marginTop: '1rem', 
-                      padding: '1rem', 
-                      background: 'rgba(34, 197, 94, 0.1)', 
-                      borderRadius: '10px',
-                      border: '1px solid rgba(34, 197, 94, 0.3)'
-                    }}>
+                    <div className="config-success-box">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '1.2rem' }}>✓</span>
-                        <small style={{ color: '#22c55e', fontWeight: '600', fontSize: '0.9rem' }}>
+                        <small className="config-success-text" style={{ fontSize: '1.05rem' }}>
                           Automated payment reminders are scheduled for the {data.group.paymentDueDay}{data.group.paymentDueDay === 1 ? 'st' : data.group.paymentDueDay === 2 ? 'nd' : data.group.paymentDueDay === 3 ? 'rd' : 'th'} of each month at 9:00 AM
                         </small>
                       </div>
@@ -548,7 +485,7 @@ const GroupDetailsPage = () => {
                         const nextDateStr = `${monthNames[nextReminderDate.getMonth()]} ${nextReminderDate.getDate()}, ${nextReminderDate.getFullYear()}`;
                         
                         return (
-                          <small style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.85rem', display: 'block', marginTop: '0.25rem', marginLeft: '1.75rem' }}>
+                          <small className="config-success-detail">
                             Next reminder: {nextDateStr} at 9:00 AM
                           </small>
                         );
@@ -558,10 +495,9 @@ const GroupDetailsPage = () => {
                 </label>
                 <button
                   type="button"
-                  className="btn btn--primary"
+                  className="btn btn--primary btn-config"
                   onClick={handleUpdatePaymentDueDay}
                   disabled={!groupSettings.paymentDueDate}
-                  style={{ whiteSpace: 'nowrap', minWidth: '140px' }}
                 >
                   💾 Update Date
                 </button>
@@ -576,7 +512,7 @@ const GroupDetailsPage = () => {
         <section className="card">
           <div className="card__header">
             <h3>📨 Payment Reminder Management</h3>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
               Distribute SMS payment notifications to team members with outstanding balances for the selected billing period
             </p>
           </div>
@@ -589,7 +525,7 @@ const GroupDetailsPage = () => {
                 onChange={(e) => setReminderMonth(e.target.value)}
                 required
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
+              <small className="text-muted" style={{ fontSize: '1rem', display: 'block', marginTop: '0.5rem', lineHeight: '1.5' }}>
                 Select the billing period for which payment reminders should be distributed
               </small>
             </label>
@@ -602,7 +538,7 @@ const GroupDetailsPage = () => {
                 onChange={(e) => setReminderMessage(e.target.value)}
               />
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <div className="config-form-actions">
               <button
                 className="btn btn--primary"
                 type="button"
@@ -615,18 +551,8 @@ const GroupDetailsPage = () => {
             </div>
           </div>
           {reminderResult && (
-            <div
-              style={{
-                marginTop: '1.5rem',
-                padding: '1.25rem',
-                borderRadius: '12px',
-                backgroundColor: reminderResult.success
-                  ? 'rgba(16, 185, 129, 0.1)'
-                  : 'rgba(239, 68, 68, 0.1)',
-                border: `2px solid ${reminderResult.success ? '#10b981' : '#ef4444'}`,
-              }}
-            >
-              <p style={{ fontWeight: '700', color: reminderResult.success ? '#10b981' : '#ef4444', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+            <div className={`reminder-result-box ${reminderResult.success ? 'reminder-result-box--success' : 'reminder-result-box--error'}`}>
+              <p className={`reminder-result-title ${reminderResult.success ? 'reminder-result-title--success' : 'reminder-result-title--error'}`}>
                 {reminderResult.success
                   ? `✓ Successfully sent ${reminderResult.sent} reminder${reminderResult.sent !== 1 ? 's' : ''} for ${reminderResult.month}`
                   : '✗ Failed to send reminders'}
@@ -649,11 +575,11 @@ const GroupDetailsPage = () => {
 
       {/* Team Members Tab */}
       {activeTab === 'players' && (
-        <div style={{ display: 'grid', gap: '1.5rem' }}>
+        <div className="grid" style={{ gap: '1.5rem' }}>
           <section className="card">
             <div className="card__header">
               <h3>➕ Add Team Member</h3>
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
                 Enroll a new team member to this training group. A secure account with login credentials will be automatically created upon registration.
               </p>
             </div>
@@ -678,7 +604,7 @@ const GroupDetailsPage = () => {
                   maxLength={20}
                   placeholder="e.g., 0526867838 or +972526867838"
                 />
-                <small className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                <small className="text-muted" style={{ fontSize: '1rem', marginTop: '0.25rem', display: 'block', lineHeight: '1.5' }}>
                   This number will be used for automated SMS payment notifications and communication
                 </small>
               </label>
@@ -695,7 +621,7 @@ const GroupDetailsPage = () => {
                   step="0.01"
                 />
                 {data.group?.defaultMonthlyFee && (
-                  <small className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                  <small className="text-muted" style={{ fontSize: '1rem', marginTop: '0.25rem', display: 'block', lineHeight: '1.5' }}>
                     Default monthly fee for this group: ${data.group.defaultMonthlyFee.toFixed(2)}
                   </small>
                 )}

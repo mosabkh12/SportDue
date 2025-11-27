@@ -11,7 +11,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -60,7 +60,7 @@
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   position: relative;
   background: transparent;
   cursor: pointer;
@@ -132,7 +132,7 @@
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
   font-weight: 600;
 }
@@ -145,6 +145,7 @@
 }
 
 .info-label {
+  font-size: 1.15rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
   color: var(--text-primary);
@@ -164,7 +165,7 @@
 }
 
 .info-item-label {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
   font-weight: 600;
@@ -177,7 +178,7 @@
 }
 
 .info-item-note {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.6);
   margin-top: 0.5rem;
 }
@@ -191,7 +192,7 @@
 }
 
 .config-section-title {
-  font-size: 1.125rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 1rem;
@@ -223,12 +224,12 @@
 .config-success-text {
   color: #22c55e;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
 }
 
 .config-success-detail {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 0.85rem;
+  font-size: 1rem;
   display: block;
   margin-top: 0.25rem;
   margin-left: 1.75rem;
@@ -254,7 +255,7 @@
 
 .reminder-result-title {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   margin-bottom: 0.5rem;
 }
 
@@ -332,12 +333,12 @@
 }
 
 .empty-state-title {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   margin-bottom: 0.5rem;
 }
 
 .empty-state-subtitle {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
 }
 
 /* Credentials modal */
@@ -489,5 +490,28 @@
 .btn-config {
   white-space: nowrap;
   min-width: 140px;
+}
+
+/* Enhanced text sizes for better readability */
+.card__header p.text-muted {
+  font-size: 1.1rem !important;
+  line-height: 1.6;
+}
+
+label {
+  font-size: 1.05rem !important;
+}
+
+label small.text-muted {
+  font-size: 1rem !important;
+  line-height: 1.5;
+}
+
+input, textarea, select {
+  font-size: 1.05rem !important;
+}
+
+input::placeholder, textarea::placeholder {
+  font-size: 1rem !important;
 }
 

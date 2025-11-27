@@ -7,7 +7,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -33,7 +33,7 @@
 }
 
 .schedule-config-title {
-  font-size: 1.125rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
@@ -111,7 +111,8 @@
 .day-selected-text {
   color: #22c55e;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 /* Time inputs */
@@ -130,7 +131,7 @@
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
 }
 
 .time-input {
@@ -140,14 +141,14 @@
   border: 1px solid rgba(55, 65, 81, 0.5);
   background-color: rgba(17, 24, 39, 0.6);
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
 .save-schedule-btn {
   width: 100%;
   padding: 0.875rem 1.5rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   border-radius: 8px;
   transition: all 0.2s ease;
@@ -185,9 +186,10 @@
 }
 
 .date-indicator {
-  font-size: 0.85rem;
+  font-size: 1rem;
   display: block;
   margin-top: 0.25rem;
+  line-height: 1.5;
 }
 
 .date-indicator--training {
@@ -256,7 +258,7 @@
   padding: 0.5rem;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   background-color: white;
   cursor: pointer;
 }
@@ -293,6 +295,6 @@
 }
 
 .btn-small {
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 

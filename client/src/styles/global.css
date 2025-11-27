@@ -68,6 +68,7 @@ body {
     linear-gradient(135deg, #0a0a0a 0%, #0f172a 100%);
   background-attachment: fixed;
   color: var(--text-primary);
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "liga" 1, "calt" 1;
@@ -142,7 +143,26 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: inherit;
+  font-size: 1.05rem;
+}
+
+/* Enhanced text sizes for better readability */
+p, span, div {
+  line-height: 1.6;
+}
+
+.text-muted {
+  font-size: 1.1rem !important;
+  line-height: 1.6;
+}
+
+small {
+  font-size: 1rem !important;
+  line-height: 1.5;
+}
+
+label {
+  font-size: 1.05rem !important;
 }
 
 /* Scrollbar Styling */

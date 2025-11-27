@@ -10,13 +10,14 @@
 
 .group-info-text {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 .group-info-strong {
   color: var(--text-primary);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 .empty-state {
@@ -25,11 +26,12 @@
 }
 
 .empty-state-title {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   margin-bottom: 0.5rem;
 }
 
 .empty-state-subtitle {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 

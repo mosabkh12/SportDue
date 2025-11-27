@@ -11,7 +11,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -27,7 +27,7 @@
 }
 
 .btn-edit-details {
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   padding: 0.5rem 1rem;
 }
 
@@ -61,7 +61,7 @@
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
 }
 
 .form-input {
@@ -71,7 +71,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: white;
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .form-input--monospace {
@@ -85,15 +85,16 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: white;
-  font-size: 1rem;
+  font-size: 1.05rem;
   resize: vertical;
 }
 
 .form-help-text {
-  font-size: 0.85rem;
+  font-size: 1rem;
   display: block;
   margin-top: 0.25rem;
   color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .form-actions {
@@ -123,12 +124,12 @@
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
 }
 
 .detail-value {
   color: white;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .detail-value--monospace {
@@ -142,8 +143,8 @@
 
 .notes-text {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 1.1rem;
+  line-height: 1.7;
   white-space: pre-wrap;
 }
 
@@ -192,7 +193,7 @@
 
 .payment-form-submit-btn {
   padding: 0.625rem 1.5rem;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 600;
   border-radius: 8px;
   transition: all 0.2s ease;
@@ -208,7 +209,7 @@
 .payment-status-badge {
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
   display: inline-block;
 }
@@ -232,7 +233,7 @@
 }
 
 .btn-small {
-  font-size: 0.85rem;
+  font-size: 1rem;
   padding: 0.4rem 0.8rem;
 }
 
@@ -284,7 +285,7 @@
   display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -304,12 +305,13 @@
 }
 
 .empty-state-title {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   margin-bottom: 0.5rem;
 }
 
 .empty-state-subtitle {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 
 .table-wrapper {

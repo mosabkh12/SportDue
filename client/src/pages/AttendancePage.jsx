@@ -283,18 +283,18 @@ const AttendancePage = () => {
             <h3>Training Schedule & Date Selection</h3>
             {trainingDays.length > 0 && (
               <div style={{ marginTop: '0.5rem' }}>
-                <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '0.25rem', fontWeight: '600' }}>
+                <p className="text-muted" style={{ fontSize: '1.1rem', marginBottom: '0.25rem', fontWeight: '600' }}>
                   📅 Training Days: {trainingDays.map(d => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]).join(', ')}
                 </p>
                 {trainingTime && (
-                  <p className="text-muted" style={{ fontSize: '0.85rem', color: 'rgba(59, 130, 246, 0.9)' }}>
+                  <p className="text-muted" style={{ fontSize: '1rem', color: 'rgba(59, 130, 246, 0.9)' }}>
                     ⏰ Session Time: {trainingTime.startTime || '18:00'} - {trainingTime.endTime || '19:30'}
                   </p>
                 )}
               </div>
             )}
             {trainingDays.length === 0 && (
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.5rem', lineHeight: '1.6' }}>
                 ⚠️ No training schedule configured. Click "Configure Schedule" to set training days and session times.
               </p>
             )}
@@ -323,13 +323,13 @@ const AttendancePage = () => {
                 <span style={{ fontSize: '1.5rem' }}>📅</span>
                 Configure Training Schedule
               </h4>
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+              <p className="text-muted" style={{ fontSize: '1.1rem', marginTop: '0.25rem', lineHeight: '1.6' }}>
                 Select the days of the week and times when training sessions occur. This enables smart navigation between training days.
               </p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
                 Training Days
               </label>
               <div className="schedule-days-grid">
