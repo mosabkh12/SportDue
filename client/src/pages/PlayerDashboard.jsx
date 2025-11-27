@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import useAuth from '../hooks/useAuth';
 import StatCard from '../components/StatCard.jsx';
 
 const PlayerDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [player, setPlayer] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -21,7 +23,7 @@ const PlayerDashboard = () => {
         apiClient.get('/player/me/attendance'),
       ]);
       setPlayer(playerRes.data);
-      setPayments(paymentRes.data);
+      setPayments(paymentRes.data || []);
       setAttendance(attendanceRes.data || []);
     } catch (err) {
       setError(err.message);
@@ -36,17 +38,24 @@ const PlayerDashboard = () => {
     }
   }, [user]);
 
-  // Calculate payment summary
+  // Calculate payment summary - ensure we're using numbers
   const paymentSummary = payments.reduce(
     (acc, payment) => {
-      acc.totalDue += payment.amountDue;
-      acc.totalPaid += payment.amountPaid;
+      const amountDue = parseFloat(payment.amountDue || 0);
+      const amountPaid = parseFloat(payment.amountPaid || 0);
+      acc.totalDue += isNaN(amountDue) ? 0 : amountDue;
+      acc.totalPaid += isNaN(amountPaid) ? 0 : amountPaid;
       return acc;
     },
     { totalDue: 0, totalPaid: 0 }
   );
 
-  const outstandingBalance = paymentSummary.totalDue - paymentSummary.totalPaid;
+  // Calculate outstanding balance
+  // If there are payments, use payment-based calculation
+  // Otherwise, if player has monthlyFee, outstanding balance could be that
+  const outstandingBalance = paymentSummary.totalDue > 0 
+    ? paymentSummary.totalDue - paymentSummary.totalPaid
+    : 0;
 
   // Calculate attendance summary
   const attendanceSummary = attendance.reduce(
@@ -68,9 +77,58 @@ const PlayerDashboard = () => {
     <div className="page">
       <section className="page-header">
         <div>
+          
           <p className="eyebrow">Player portal</p>
           <h2>Welcome, {player?.fullName || user?.fullName || 'Player'}</h2>
           <p className="text-muted">View your payment history and attendance records.</p>
+          {player?.group && (
+            <div style={{ 
+              marginTop: '1rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: 'rgba(59, 130, 246, 0.15)',
+                borderRadius: '8px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#93c5fd'
+              }}>
+                <span>👥</span>
+                <span>{player.group.name}</span>
+              </div>
+              {player.group.sportType && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  background: player.group.sportType === 'basketball' 
+                    ? 'rgba(239, 68, 68, 0.15)' 
+                    : 'rgba(34, 197, 94, 0.15)',
+                  borderRadius: '8px',
+                  border: `1px solid ${player.group.sportType === 'basketball' 
+                    ? 'rgba(239, 68, 68, 0.3)' 
+                    : 'rgba(34, 197, 94, 0.3)'}`,
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: player.group.sportType === 'basketball' 
+                    ? '#fca5a5' 
+                    : '#86efac'
+                }}>
+                  <span>{player.group.sportType === 'basketball' ? '🏀' : '⚽'}</span>
+                  <span style={{ textTransform: 'capitalize' }}>{player.group.sportType}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -80,35 +138,74 @@ const PlayerDashboard = () => {
       {player && (
         <>
           <section className="grid stats-grid">
-            <StatCard label="Monthly Fee" value={`$${player.monthlyFee}`} />
+            <StatCard 
+              label="Monthly Fee" 
+              value={parseFloat(player.monthlyFee || 0)} 
+              format="currency"
+            />
             <StatCard
               label="Total Paid"
-              value={`$${paymentSummary.totalPaid.toFixed(2)}`}
+              value={paymentSummary.totalPaid}
               accent="#10b981"
+              format="currency"
             />
             <StatCard
               label="Outstanding Balance"
-              value={`$${outstandingBalance.toFixed(2)}`}
+              value={outstandingBalance}
               accent={outstandingBalance > 0 ? '#ef4444' : '#10b981'}
+              format="currency"
             />
             {attendanceSummary.total > 0 && (
               <StatCard
                 label="Attendance Rate"
-                value={`${attendanceRate}%`}
+                value={attendanceRate}
                 accent="#6366f1"
+                format="percentage"
               />
             )}
           </section>
 
           <section className="card">
             <h3>Contact Information</h3>
-            <p className="text-muted">Phone: {player.phone}</p>
-            {player.notes && (
-              <div style={{ marginTop: '1rem' }}>
-                <p className="text-muted">Notes:</p>
-                <p>{player.notes}</p>
-              </div>
-            )}
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <p className="text-muted">
+                <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Phone:</strong>
+                {player.phone}
+              </p>
+              {player?.group && (
+                <p className="text-muted">
+                  <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Group:</strong>
+                  {player.group.name}
+                  {player.group.sportType && (
+                    <span style={{ 
+                      marginLeft: '0.5rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      background: player.group.sportType === 'basketball' 
+                        ? 'rgba(239, 68, 68, 0.15)' 
+                        : 'rgba(34, 197, 94, 0.15)',
+                      border: `1px solid ${player.group.sportType === 'basketball' 
+                        ? 'rgba(239, 68, 68, 0.3)' 
+                        : 'rgba(34, 197, 94, 0.3)'}`,
+                      color: player.group.sportType === 'basketball' 
+                        ? '#fca5a5' 
+                        : '#86efac'
+                    }}>
+                      {player.group.sportType === 'basketball' ? '🏀' : '⚽'} {player.group.sportType.charAt(0).toUpperCase() + player.group.sportType.slice(1)}
+                    </span>
+                  )}
+                </p>
+              )}
+              {player.notes && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <p className="text-muted">
+                    <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Notes:</strong>
+                  </p>
+                  <p style={{ marginTop: '0.25rem' }}>{player.notes}</p>
+                </div>
+              )}
+            </div>
           </section>
 
           <section className="card">
@@ -133,8 +230,8 @@ const PlayerDashboard = () => {
                   {payments.map((payment) => (
                     <tr key={payment._id}>
                       <td>{payment.month}</td>
-                      <td>${payment.amountDue}</td>
-                      <td>${payment.amountPaid}</td>
+                      <td>${parseFloat(payment.amountDue || 0).toFixed(2)}</td>
+                      <td>${parseFloat(payment.amountPaid || 0).toFixed(2)}</td>
                       <td>
                         <span
                           style={{

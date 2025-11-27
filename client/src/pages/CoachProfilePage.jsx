@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import useAuth from '../hooks/useAuth';
 import { useNotifications } from '../context/NotificationContext';
 
 const CoachProfilePage = () => {
+  const navigate = useNavigate();
   const { updateUser } = useAuth();
   const notifications = useNotifications();
   const [profile, setProfile] = useState({ username: '', email: '', phone: '' });
@@ -85,6 +87,38 @@ const CoachProfilePage = () => {
     <div className="page">
       <section className="page-header">
         <div>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn--outline"
+            type="button"
+            style={{
+              marginBottom: '1rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              fontSize: '0.9rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
           <p className="eyebrow">Coach</p>
           <h2>Profile & security</h2>
           <p className="text-muted">Keep your username, phone, and password up to date.</p>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import StatCard from '../components/StatCard.jsx';
 import { useNotifications } from '../context/NotificationContext';
 
 const CoachDashboard = () => {
+  const navigate = useNavigate();
   const notifications = useNotifications();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);

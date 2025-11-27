@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { handleApiError } from '../utils/errorHandler';
+import { useNotifications } from '../context/NotificationContext';
 
 const PlayerDetailsPage = () => {
   const { playerId } = useParams();
+  const navigate = useNavigate();
+  const notifications = useNotifications();
   const [player, setPlayer] = useState(null);
   const [payments, setPayments] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ month: '', amountPaid: '', amountDue: '' });
-  const [resetPasswordCredentials, setResetPasswordCredentials] = useState(null);
-  const [resettingPassword, setResettingPassword] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [editForm, setEditForm] = useState({ amountPaid: '', amountDue: '' });
   const [deletingPayment, setDeletingPayment] = useState(null);
+  const [editingPlayer, setEditingPlayer] = useState(false);
+  const [playerEditForm, setPlayerEditForm] = useState({ fullName: '', phone: '', monthlyFee: '', notes: '', username: '', password: '' });
+  const [updatingPlayer, setUpdatingPlayer] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -44,6 +48,20 @@ const PlayerDetailsPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Initialize edit form when player data is loaded
+  useEffect(() => {
+    if (player && !editingPlayer) {
+      setPlayerEditForm({
+        fullName: player.fullName || '',
+        phone: player.phone || '',
+        monthlyFee: player.monthlyFee || '',
+        notes: player.notes || '',
+        username: player.username || '',
+        password: player.displayPassword || '',
+      });
+    }
+  }, [player, editingPlayer]);
 
   const handlePaymentChange = (event) => {
     setPaymentForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
@@ -128,42 +146,80 @@ const PlayerDetailsPage = () => {
     }
   };
 
-  const handleResetPassword = async () => {
-    setResettingPassword(true);
+  const handleStartEdit = () => {
+    setEditingPlayer(true);
     setError(null);
-    setResetPasswordCredentials(null);
+  };
+
+  const handleCancelPlayerEdit = () => {
+    setEditingPlayer(false);
+    if (player) {
+      setPlayerEditForm({
+        fullName: player.fullName || '',
+        phone: player.phone || '',
+        monthlyFee: player.monthlyFee || '',
+        notes: player.notes || '',
+        username: player.username || '',
+        password: player.displayPassword || '',
+      });
+    }
+    setError(null);
+  };
+
+  const handlePlayerEditChange = (e) => {
+    setPlayerEditForm(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSavePlayerEdit = async () => {
+    setUpdatingPlayer(true);
+    setError(null);
     try {
-      const response = await apiClient.post(`/players/${playerId}/reset-password`);
-      
-      // Get the password from response - check multiple places
-      const newPassword = response.data.displayPassword || response.data.credentials?.password;
-      
-      // Update player state immediately so password appears right away
-      if (newPassword) {
-        setPlayer(prev => ({
-          ...prev,
-          ...response.data,
-          displayPassword: newPassword, // Force update with new password
-          username: response.data.username || prev?.username
-        }));
+      // Validate phone number length if being updated
+      if (playerEditForm.phone && playerEditForm.phone.trim().length > 20) {
+        notifications.error('Phone number must be 20 characters or less');
+        setUpdatingPlayer(false);
+        return;
       }
-      
-      // Show success message with password
-      if (newPassword) {
-        setResetPasswordCredentials({
-          username: response.data.username || player?.username,
-          password: newPassword,
-        });
+
+      // Validate monthly fee
+      const monthlyFee = parseFloat(playerEditForm.monthlyFee);
+      if (isNaN(monthlyFee) || monthlyFee < 0) {
+        notifications.error('Monthly fee must be a valid number (0 or greater)');
+        setUpdatingPlayer(false);
+        return;
       }
-      
-      // Refresh data after short delay to sync everything
-      setTimeout(() => {
-        fetchData();
-      }, 600);
+
+      const updateData = {
+        fullName: playerEditForm.fullName.trim(),
+        phone: playerEditForm.phone.trim(),
+        monthlyFee: monthlyFee,
+        notes: playerEditForm.notes.trim(),
+      };
+
+      // Include username if provided
+      if (playerEditForm.username.trim()) {
+        updateData.username = playerEditForm.username.trim();
+      }
+
+      // Include password if provided
+      if (playerEditForm.password.trim()) {
+        updateData.password = playerEditForm.password.trim();
+      }
+
+      const response = await apiClient.put(`/players/${playerId}`, updateData);
+
+      notifications.success('Player details updated successfully');
+      setEditingPlayer(false);
+      fetchData();
     } catch (err) {
-      handleApiError(err, (msg) => setError(msg || 'Failed to reset password'));
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to update player details';
+      handleApiError(err, setError);
+      notifications.error(errorMessage);
     } finally {
-      setResettingPassword(false);
+      setUpdatingPlayer(false);
     }
   };
 
@@ -178,7 +234,39 @@ const PlayerDetailsPage = () => {
   return (
     <div className="page">
       <section className="page-header">
-        <div>
+        <div style={{ flex: 1 }}>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn--outline"
+            type="button"
+            style={{
+              marginBottom: '1rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              fontSize: '0.9rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
           <p className="eyebrow">Player</p>
           <h2>{player?.fullName || 'Player'}</h2>
           <p className="text-muted">
@@ -188,124 +276,254 @@ const PlayerDetailsPage = () => {
       </section>
 
       <section className="card">
-        <h3 style={{ color: 'white', marginBottom: '1.5rem' }}>Contact Information</h3>
-        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Phone:</label>
-            <p style={{ color: 'white', fontSize: '1rem' }}>{player?.phone}</p>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Username:</label>
-            {player?.username ? (
-              <code style={{ 
-                padding: '0.625rem 1rem', 
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '10px',
-                fontSize: '1rem',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                display: 'inline-block',
-                fontWeight: '600',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                letterSpacing: '0.05em'
-              }}>{player.username}</code>
-            ) : (
-              <div>
-                <span className="text-muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>No username set</span>
-                <button
-                  className="btn btn--outline"
-                  type="button"
-                  onClick={handleResetPassword}
-                  disabled={resettingPassword}
-                >
-                  {resettingPassword ? 'Generating...' : '🔑 Generate Login Credentials'}
-                </button>
-              </div>
-            )}
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Password:</label>
-            {player?.displayPassword ? (
-              <code style={{ 
-                padding: '0.625rem 1rem', 
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '10px',
-                fontSize: '1rem',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                display: 'inline-block',
-                fontWeight: '700',
-                color: '#fff',
-                border: '2px solid rgba(245, 158, 11, 0.5)',
-                minWidth: '150px',
-                letterSpacing: '0.05em',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-              }}>{player.displayPassword}</code>
-            ) : (
-              <div>
-                <span className="text-muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>No password set</span>
-                <button
-                  className="btn btn--outline"
-                  type="button"
-                  onClick={handleResetPassword}
-                  disabled={resettingPassword}
-                >
-                  {resettingPassword ? 'Generating...' : '🔑 Generate Password'}
-                </button>
-              </div>
-            )}
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Monthly fee:</label>
-            <p style={{ color: 'white', fontSize: '1.25rem', fontWeight: '700' }}>${player?.monthlyFee}</p>
-          </div>
-          {player?.notes && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Notes:</label>
-              <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem', lineHeight: '1.6' }}>{player.notes}</p>
-            </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: 'white', margin: 0 }}>Player Information</h3>
+          {!editingPlayer && (
+            <button
+              className="btn btn--secondary"
+              type="button"
+              onClick={handleStartEdit}
+              style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+            >
+              ✏️ Edit Details
+            </button>
           )}
         </div>
-        {player?.username && (
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <button
-              className="btn btn--outline"
-              type="button"
-              onClick={handleResetPassword}
-              disabled={resettingPassword}
-            >
-              {resettingPassword ? 'Resetting...' : '🔑 Reset Player Password'}
-            </button>
+        
+        {editingPlayer ? (
+          <div style={{ display: 'grid', gap: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Full Name *
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                value={playerEditForm.fullName}
+                onChange={handlePlayerEditChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem'
+                }}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Phone Number *
+              </label>
+              <input
+                type="text"
+                name="phone"
+                value={playerEditForm.phone}
+                onChange={handlePlayerEditChange}
+                required
+                maxLength={20}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  fontFamily: 'monospace'
+                }}
+                placeholder="e.g., 0526867838 or +972526867838"
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Maximum 20 characters
+              </small>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={playerEditForm.username}
+                onChange={handlePlayerEditChange}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  fontFamily: "'Monaco', 'Courier New', monospace"
+                }}
+                placeholder="Enter username (optional)"
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Optional: Leave blank to auto-generate
+              </small>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Password
+              </label>
+              <input
+                type="text"
+                name="password"
+                value={playerEditForm.password}
+                onChange={handlePlayerEditChange}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  fontFamily: "'Monaco', 'Courier New', monospace"
+                }}
+                placeholder="Enter password (optional)"
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Optional: Leave blank to keep current password
+              </small>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Monthly Fee ($) *
+              </label>
+              <input
+                type="number"
+                name="monthlyFee"
+                value={playerEditForm.monthlyFee}
+                onChange={handlePlayerEditChange}
+                required
+                min="0"
+                step="0.01"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem'
+                }}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+                Notes
+              </label>
+              <textarea
+                name="notes"
+                value={playerEditForm.notes}
+                onChange={handlePlayerEditChange}
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  resize: 'vertical'
+                }}
+                placeholder="Optional: Additional notes about this player"
+              />
+            </div>
+            {error && <p className="error-text" style={{ marginTop: '0.5rem' }}>{error}</p>}
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <button
+                className="btn btn--outline"
+                type="button"
+                onClick={handleCancelPlayerEdit}
+                disabled={updatingPlayer}
+                style={{ minWidth: '100px' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn--primary"
+                type="button"
+                onClick={handleSavePlayerEdit}
+                disabled={updatingPlayer || !playerEditForm.fullName.trim() || !playerEditForm.phone.trim()}
+                style={{ minWidth: '120px' }}
+              >
+                {updatingPlayer ? 'Saving...' : '💾 Save Changes'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Full Name:</label>
+              <p style={{ color: 'white', fontSize: '1rem' }}>{player?.fullName || '—'}</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Phone:</label>
+              <p style={{ color: 'white', fontSize: '1rem', fontFamily: 'monospace' }}>{player?.phone || '—'}</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Username:</label>
+              {player?.username ? (
+                <code style={{ 
+                  padding: '0.625rem 1rem', 
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontFamily: "'Monaco', 'Courier New', monospace",
+                  display: 'inline-block',
+                  fontWeight: '600',
+                  color: 'white',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  letterSpacing: '0.05em'
+                }}>{player.username}</code>
+              ) : (
+                <span className="text-muted" style={{ fontSize: '0.9rem' }}>No username set</span>
+              )}
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Password:</label>
+              {player?.displayPassword ? (
+                <code style={{ 
+                  padding: '0.625rem 1rem', 
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontFamily: "'Monaco', 'Courier New', monospace",
+                  display: 'inline-block',
+                  fontWeight: '700',
+                  color: '#fff',
+                  border: '2px solid rgba(245, 158, 11, 0.5)',
+                  minWidth: '150px',
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
+                }}>{player.displayPassword}</code>
+              ) : (
+                <span className="text-muted" style={{ fontSize: '0.9rem' }}>No password set</span>
+              )}
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Monthly fee:</label>
+              <p style={{ color: 'white', fontSize: '1.25rem', fontWeight: '700' }}>${parseFloat(player?.monthlyFee || 0).toFixed(2)}</p>
+            </div>
+            {player?.notes && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Notes:</label>
+                <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{player.notes}</p>
+              </div>
+            )}
           </div>
         )}
       </section>
-
-      {resetPasswordCredentials && (
-        <section className="success-banner animate-fade-in">
-          <h4>✓ Password updated successfully!</h4>
-          <p style={{ color: 'rgba(255, 255, 255, 0.9)', marginBottom: '1rem', fontWeight: '500' }}>New password has been set and is now visible above.</p>
-          <div style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(10px)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-            <p style={{ marginBottom: '0.75rem', fontSize: '0.95rem', color: 'white' }}>
-              <strong style={{ color: 'rgba(255, 255, 255, 0.9)', marginRight: '0.5rem' }}>Username:</strong>
-              <code style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontFamily: 'monospace' }}>{resetPasswordCredentials.username}</code>
-            </p>
-            <p style={{ fontSize: '0.95rem', color: 'white' }}>
-              <strong style={{ color: 'rgba(255, 255, 255, 0.9)', marginRight: '0.5rem' }}>New Password:</strong>
-              <code style={{ background: 'rgba(245, 158, 11, 0.3)', padding: '0.25rem 0.5rem', borderRadius: '6px', fontFamily: 'monospace', fontWeight: '700', border: '1px solid rgba(245, 158, 11, 0.5)' }}>{resetPasswordCredentials.password}</code>
-            </p>
-          </div>
-          <button
-            className="btn btn--primary"
-            type="button"
-            onClick={() => {
-              setResetPasswordCredentials(null);
-            }}
-          >
-            Close
-          </button>
-        </section>
-      )}
 
       <section className="card">
         <div className="card__header">

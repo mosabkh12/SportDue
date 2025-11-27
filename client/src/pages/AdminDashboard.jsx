@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import StatCard from '../components/StatCard.jsx';
 import { useNotifications } from '../context/NotificationContext';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const notifications = useNotifications();
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(false);

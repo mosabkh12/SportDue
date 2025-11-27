@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { handleApiError } from '../utils/errorHandler';
 import { useNotifications } from '../context/NotificationContext';
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const notifications = useNotifications();
   const [data, setData] = useState({ group: null, players: [] });
   const [loading, setLoading] = useState(false);
@@ -21,9 +22,9 @@ const GroupDetailsPage = () => {
   const [sendingReminders, setSendingReminders] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
   const [newPlayerCredentials, setNewPlayerCredentials] = useState(null);
-  const [resetPasswordCredentials, setResetPasswordCredentials] = useState(null);
-  const [resettingPassword, setResettingPassword] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [deletingGroup, setDeletingGroup] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -217,28 +218,33 @@ const GroupDetailsPage = () => {
     }
   };
 
-  const handleResetPassword = async (playerId) => {
-    setResettingPassword(playerId);
+  const handleDeleteGroup = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    setDeletingGroup(true);
     setError(null);
-    setResetPasswordCredentials(null);
     try {
-      const response = await apiClient.post(`/players/${playerId}/reset-password`);
-      setResetPasswordCredentials({
-        playerId,
-        ...response.data.credentials,
-      });
-      notifications.success('Password successfully reset. New account credentials have been generated.');
-      // Refresh to show updated credentials
+      await apiClient.delete(`/groups/${groupId}`);
+      notifications.success(`Group "${data.group?.name || 'Group'}" has been successfully deleted.`);
+      // Navigate back to dashboard after a short delay
       setTimeout(() => {
-        fetchDetails();
+        navigate('/coach/dashboard');
       }, 500);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password';
-      handleApiError(err, (msg) => setError(msg || errorMessage));
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to delete group';
+      handleApiError(err, setError);
       notifications.error(errorMessage);
+      setShowDeleteConfirm(false);
     } finally {
-      setResettingPassword(null);
+      setDeletingGroup(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   if (loading && !data.group) {
@@ -253,15 +259,62 @@ const GroupDetailsPage = () => {
     <div className="page">
       <section className="page-header">
         <div style={{ flex: 1 }}>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn--outline"
+            type="button"
+            style={{
+              marginBottom: '1rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              fontSize: '0.9rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
           <p className="eyebrow">Training Group</p>
           <h2>{data.group?.name || 'Training Group'}</h2>
           <p className="text-muted">
             {data.group?.description || 'Comprehensive management dashboard for team roster, financial tracking, and attendance monitoring.'}
           </p>
         </div>
-        <Link className="btn btn--primary" to={`/coach/groups/${groupId}/attendance`} style={{ whiteSpace: 'nowrap' }}>
-          📅 Manage Attendance
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link className="btn btn--primary" to={`/coach/groups/${groupId}/attendance`} style={{ whiteSpace: 'nowrap' }}>
+            📅 Manage Attendance
+          </Link>
+          <button
+            className="btn btn--outline"
+            type="button"
+            onClick={handleDeleteGroup}
+            disabled={deletingGroup}
+            style={{ 
+              whiteSpace: 'nowrap',
+              color: '#ef4444',
+              borderColor: '#ef4444'
+            }}
+          >
+            {deletingGroup ? 'Deleting...' : '🗑️ Delete Group'}
+          </button>
+        </div>
       </section>
 
       {/* Tab Navigation */}
@@ -871,17 +924,34 @@ const GroupDetailsPage = () => {
                         <td>
                           {player.username ? (
                             <code style={{ 
-                              padding: '0.5rem 0.75rem', 
-                              background: 'rgba(34, 197, 94, 0.15)',
-                              borderRadius: '8px',
+                              padding: '0.625rem 1rem', 
+                              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.25))',
+                              backdropFilter: 'blur(10px)',
+                              borderRadius: '10px',
                               fontSize: '0.9rem',
                               fontFamily: "'Monaco', 'Courier New', monospace",
                               display: 'inline-block',
-                              fontWeight: '600',
-                              color: '#22c55e',
-                              border: '1px solid rgba(34, 197, 94, 0.3)',
-                              letterSpacing: '0.05em'
-                            }}>{player.username}</code>
+                              fontWeight: '700',
+                              color: '#10b981',
+                              border: '1.5px solid rgba(34, 197, 94, 0.4)',
+                              letterSpacing: '0.08em',
+                              boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(34, 197, 94, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                              e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+                            }}
+                            >{player.username}</code>
                           ) : (
                             <span className="text-muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>No username assigned</span>
                           )}
@@ -889,18 +959,36 @@ const GroupDetailsPage = () => {
                         <td>
                           {player.displayPassword ? (
                             <code style={{ 
-                              padding: '0.5rem 0.75rem', 
-                              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
-                              borderRadius: '8px',
+                              padding: '0.625rem 1rem', 
+                              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))',
+                              backdropFilter: 'blur(10px)',
+                              borderRadius: '10px',
                               fontSize: '0.9rem',
                               fontFamily: "'Monaco', 'Courier New', monospace",
                               display: 'inline-block',
                               fontWeight: '700',
                               color: '#fbbf24',
-                              border: '2px solid rgba(245, 158, 11, 0.5)',
-                              letterSpacing: '0.05em',
-                              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.2)'
-                            }}>{player.displayPassword}</code>
+                              border: '1.5px solid rgba(245, 158, 11, 0.5)',
+                              letterSpacing: '0.08em',
+                              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.7)';
+                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(251, 191, 36, 0.3), rgba(234, 179, 8, 0.35))';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))';
+                            }}
+                            >{player.displayPassword}</code>
                           ) : (
                             <span className="text-muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>No password set</span>
                           )}
@@ -908,20 +996,9 @@ const GroupDetailsPage = () => {
                         <td style={{ fontFamily: 'monospace', fontSize: '0.95rem' }}>{player.phone}</td>
                         <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${parseFloat(player.monthlyFee).toFixed(2)}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <Link className="btn btn--secondary" to={`/coach/players/${player._id}`} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
-                              View Details
-                            </Link>
-                            <button
-                              className="btn btn--outline"
-                              type="button"
-                              onClick={() => handleResetPassword(player._id)}
-                              disabled={resettingPassword === player._id}
-                              style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
-                            >
-                              {resettingPassword === player._id ? 'Resetting...' : 'Reset Password'}
-                            </button>
-                          </div>
+                          <Link className="btn btn--secondary" to={`/coach/players/${player._id}`} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                            View Details
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -942,31 +1019,39 @@ const GroupDetailsPage = () => {
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Username:</label>
               <code style={{ 
-                padding: '0.75rem 1rem', 
-                background: 'rgba(34, 197, 94, 0.2)',
-                borderRadius: '8px',
-                fontSize: '1rem',
+                padding: '0.875rem 1.25rem', 
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.25))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '12px',
+                fontSize: '1.05rem',
                 display: 'block',
                 fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.05em',
-                color: '#22c55e',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                fontWeight: '600'
+                letterSpacing: '0.08em',
+                color: '#10b981',
+                border: '1.5px solid rgba(34, 197, 94, 0.4)',
+                fontWeight: '700',
+                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}>{newPlayerCredentials.username}</code>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Password:</label>
               <code style={{ 
-                padding: '0.75rem 1rem', 
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
-                borderRadius: '8px',
-                fontSize: '1rem',
+                padding: '0.875rem 1.25rem', 
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '12px',
+                fontSize: '1.05rem',
                 display: 'block',
                 fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.05em',
+                letterSpacing: '0.08em',
                 color: '#fbbf24',
-                border: '2px solid rgba(245, 158, 11, 0.5)',
-                fontWeight: '700'
+                border: '1.5px solid rgba(245, 158, 11, 0.5)',
+                fontWeight: '700',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}>{newPlayerCredentials.password}</code>
             </div>
           </div>
@@ -983,53 +1068,76 @@ const GroupDetailsPage = () => {
         </section>
       )}
 
-      {resetPasswordCredentials && (
-        <section className="card success-banner">
-          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>✓ Password Successfully Reset</h3>
-          <p style={{ fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '1rem' }}>New account credentials have been automatically generated. Please securely store these credentials immediately, as the password will not be displayed again after closing this dialog:</p>
-          <div style={{ padding: '1.5rem', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(34, 197, 94, 0.4)' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Username:</label>
-              <code style={{ 
-                padding: '0.75rem 1rem', 
-                background: 'rgba(34, 197, 94, 0.2)',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                display: 'block',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.05em',
-                color: '#22c55e',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                fontWeight: '600'
-              }}>{resetPasswordCredentials.username}</code>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <section className="card" style={{ 
+            maxWidth: '500px',
+            width: '100%',
+            background: 'var(--bg-secondary)',
+            border: '2px solid rgba(239, 68, 68, 0.5)',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+          }}>
+            <h3 style={{ color: '#ef4444', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              ⚠️ Delete Training Group
+            </h3>
+            <p style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              Are you sure you want to delete <strong>"{data.group?.name || 'this group'}"</strong>? This will permanently delete:
+            </p>
+            <ul style={{ 
+              listStyle: 'disc', 
+              paddingLeft: '1.5rem', 
+              marginBottom: '1.5rem',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.8'
+            }}>
+              <li>The training group</li>
+              <li>All team members ({data.players.length} {data.players.length === 1 ? 'member' : 'members'})</li>
+              <li>All payment records</li>
+              <li>All attendance records</li>
+            </ul>
+            <p style={{ color: '#ef4444', fontWeight: '700', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+              ⚠️ This action cannot be undone!
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn--outline"
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={deletingGroup}
+                style={{ minWidth: '100px' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn--secondary"
+                type="button"
+                onClick={handleDeleteGroup}
+                disabled={deletingGroup}
+                style={{ 
+                  minWidth: '120px',
+                  backgroundColor: '#ef4444',
+                  borderColor: '#ef4444',
+                  color: 'white'
+                }}
+              >
+                {deletingGroup ? 'Deleting...' : 'Delete Group'}
+              </button>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>New Password:</label>
-              <code style={{ 
-                padding: '0.75rem 1rem', 
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                display: 'block',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.05em',
-                color: '#fbbf24',
-                border: '2px solid rgba(245, 158, 11, 0.5)',
-                fontWeight: '700'
-              }}>{resetPasswordCredentials.password}</code>
-            </div>
-          </div>
-          <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem', fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.7)' }}>
-            ⚠️ Security Notice: Please copy these credentials immediately and share them securely with the team member through a private channel. Once this notification is closed, the password cannot be retrieved.
-          </p>
-          <button
-            className="btn btn--primary"
-            type="button"
-            onClick={() => setResetPasswordCredentials(null)}
-          >
-            Acknowledge & Close
-          </button>
-        </section>
+          </section>
+        </div>
       )}
     </div>
   );

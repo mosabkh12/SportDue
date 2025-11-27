@@ -92,7 +92,7 @@ const getPlayerDetails = catchAsync(async (req, res) => {
 });
 
 const updatePlayer = catchAsync(async (req, res, next) => {
-  const allowed = ['fullName', 'phone', 'monthlyFee', 'notes'];
+  const allowed = ['fullName', 'phone', 'monthlyFee', 'notes', 'username', 'password'];
   const updates = {};
 
   allowed.forEach((field) => {
@@ -112,10 +112,51 @@ const updatePlayer = catchAsync(async (req, res, next) => {
 
   const player = await ensurePlayerOwnership(req.params.playerId, req.user.id);
 
+  // Handle username update with uniqueness check
+  if (updates.username !== undefined) {
+    const normalizedUsername = updates.username.trim().toLowerCase();
+    if (normalizedUsername && normalizedUsername !== player.username) {
+      // Check if username is already taken by another player
+      const existingPlayer = await Player.findOne({
+        username: normalizedUsername,
+        _id: { $ne: player._id },
+      });
+      if (existingPlayer) {
+        return next(new ApiError(409, 'Username already in use'));
+      }
+      player.username = normalizedUsername;
+    } else if (!normalizedUsername) {
+      // Allow clearing username
+      player.username = undefined;
+    }
+    delete updates.username;
+  }
+
+  // Handle password update
+  if (updates.password !== undefined) {
+    if (updates.password.trim()) {
+      // Set both password and displayPassword
+      // The pre-save hook will hash the password
+      player.password = updates.password.trim();
+      player.displayPassword = updates.password.trim();
+    } else {
+      // Allow clearing password
+      player.password = undefined;
+      player.displayPassword = undefined;
+    }
+    delete updates.password;
+  }
+
+  // Apply other updates
   Object.assign(player, updates);
   await player.save();
 
-  res.json(player);
+  // Reload to get saved data including displayPassword
+  const savedPlayer = await Player.findById(player._id);
+  const playerResponse = savedPlayer.toObject();
+  playerResponse.displayPassword = savedPlayer.displayPassword || null;
+
+  res.json(playerResponse);
 });
 
 const deletePlayer = catchAsync(async (req, res, next) => {

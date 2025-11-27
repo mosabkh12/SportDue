@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useNotifications } from '../context/NotificationContext';
 import { handleApiError } from '../utils/errorHandler';
 
 const AttendancePage = () => {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [date, setDate] = useState(today);
   const [players, setPlayers] = useState([]);
@@ -261,6 +262,38 @@ const AttendancePage = () => {
     <div className="page">
       <section className="page-header">
         <div>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn--outline"
+            type="button"
+            style={{
+              marginBottom: '1rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              fontSize: '0.9rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
           <p className="eyebrow">Attendance</p>
           <h2>Group roll call</h2>
           <p className="text-muted">Pick a date, mark presence, and add quick signatures.</p>

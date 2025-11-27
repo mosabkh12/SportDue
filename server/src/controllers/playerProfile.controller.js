@@ -3,15 +3,38 @@ const catchAsync = require('../utils/catchAsync');
 const Player = require('../models/player.model');
 const Payment = require('../models/payment.model');
 const Attendance = require('../models/attendance.model');
+const Group = require('../models/group.model');
+const Coach = require('../models/coach.model');
 const { USER_ROLES } = require('../config/constants');
 
 // Get player's own profile
 const getMyProfile = catchAsync(async (req, res, next) => {
-  const player = await Player.findById(req.user.id);
+  const player = await Player.findById(req.user.id).populate({
+    path: 'groupId',
+    select: 'name description coachId',
+    populate: {
+      path: 'coachId',
+      select: 'sportType'
+    }
+  });
+  
   if (!player) {
     return next(new ApiError(404, 'Player not found'));
   }
-  res.json(player);
+  
+  const playerObj = player.toObject();
+  
+  // Include group and sport type information
+  if (player.groupId) {
+    playerObj.group = {
+      id: player.groupId._id,
+      name: player.groupId.name,
+      description: player.groupId.description,
+      sportType: player.groupId.coachId?.sportType || null
+    };
+  }
+  
+  res.json(playerObj);
 });
 
 // Get player's own payments
