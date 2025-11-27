@@ -1,4 +1,4 @@
-const { Vonage } = require('@vonage/server-sdk');
+const axios = require('axios');
 
 const sendPaymentReminder = async (phone, message) => {
   if (!phone) {
@@ -19,71 +19,173 @@ const sendPaymentReminder = async (phone, message) => {
     };
   }
 
-  // Get Vonage credentials
-  const vonageApiKey = process.env.VONAGE_API_KEY;
-  const vonageApiSecret = process.env.VONAGE_API_SECRET;
-  const vonageFromNumber = process.env.VONAGE_FROM_NUMBER || process.env.VONAGE_BRAND_NAME;
+  // Get BulkGate credentials from environment variables (support multiple naming conventions)
+  const bulkgateAppId = process.env.BULKGATE_APP_ID || process.env.BULKGATE_APPLICATION_ID;
+  const bulkgateToken = process.env.BULKGATE_TOKEN || 
+                       process.env.BULKGATE_APP_TOKEN || 
+                       process.env.BULKGATE_APPLICATION_TOKEN;
+  const bulkgateSenderId = process.env.BULKGATE_SENDER_ID || process.env.SMS_SENDER_ID;
 
-  if (!vonageApiKey || !vonageApiSecret) {
-    throw new Error('Vonage credentials not configured. Set VONAGE_API_KEY and VONAGE_API_SECRET in .env');
+  if (!bulkgateAppId || !bulkgateToken) {
+    throw new Error('BulkGate credentials not configured. Set BULKGATE_APP_ID (or BULKGATE_APPLICATION_ID) and BULKGATE_TOKEN (or BULKGATE_APP_TOKEN or BULKGATE_APPLICATION_TOKEN) in .env');
   }
 
   try {
-    // Initialize Vonage client
-    const vonage = new Vonage({
-      apiKey: vonageApiKey,
-      apiSecret: vonageApiSecret,
-    });
+    // Normalize phone number (remove spaces, dashes, parentheses, and any non-numeric characters except +)
+    let phoneNumber = phone.trim().replace(/[\s\-\(\)]/g, '');
 
-    // Normalize phone number (remove spaces, dashes, etc.)
-    let phoneNumber = phone.replace(/[\s\-\(\)]/g, '');
+    // Validate phone number is not empty after normalization
+    if (!phoneNumber || phoneNumber.length < 8) {
+      throw new Error(`Invalid phone number format: ${phone}`);
+    }
 
-    // Format phone number with country code
+    // Format phone number - BulkGate expects international format with country code
     if (!phoneNumber.startsWith('+')) {
       // Detect if Israeli number (starts with 05)
       if (phoneNumber.startsWith('05') && phoneNumber.length === 10) {
         // Israeli mobile number - convert to +972
         phoneNumber = `+972${phoneNumber.substring(1)}`;
+      } else if (phoneNumber.startsWith('972') && phoneNumber.length >= 12) {
+        // Already has country code but missing +
+        phoneNumber = `+${phoneNumber}`;
       } else {
         // Use default country code from env or default to +972 for Israel
         const defaultCountryCode = process.env.DEFAULT_COUNTRY_CODE || '+972';
+        // Remove leading 0 if present
+        if (phoneNumber.startsWith('0')) {
+          phoneNumber = phoneNumber.substring(1);
+        }
         phoneNumber = `${defaultCountryCode}${phoneNumber}`;
       }
     }
 
-    // Send SMS via Vonage
-    const responseData = await vonage.sms.send({
-      to: phoneNumber,
-      from: vonageFromNumber || 'SportDue',
+    // BulkGate API endpoint
+    const apiUrl = process.env.BULKGATE_API_URL || 'https://portal.bulkgate.com/api/1.0/simple/transactional';
+
+    // Check if message contains non-ASCII characters (Unicode)
+    const hasUnicode = /[^\x00-\x7F]/.test(message);
+    const unicode = hasUnicode ? 1 : 0;
+
+    // BulkGate API request payload
+    const requestBody = {
+      application_id: bulkgateAppId,
+      application_token: bulkgateToken,
+      number: phoneNumber,
       text: message,
+      unicode: unicode,
+    };
+
+    // Add sender_id if provided
+    if (bulkgateSenderId) {
+      requestBody.sender_id = bulkgateSenderId;
+    }
+
+    console.log(`📤 [BULKGATE] Attempting to send SMS to ${phoneNumber}`);
+    console.log(`📤 [BULKGATE] Message length: ${message.length} characters`);
+    console.log(`📤 [BULKGATE] Unicode: ${unicode === 1 ? 'Yes' : 'No'}`);
+
+    // Send SMS via BulkGate API
+    const response = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      timeout: 30000, // 30 second timeout
     });
 
-    console.log(`📤 [VONAGE] Response:`, JSON.stringify(responseData, null, 2));
+    console.log(`📤 [BULKGATE] Response Status: ${response.status}`);
+    console.log(`📤 [BULKGATE] Response Data:`, JSON.stringify(response.data, null, 2));
 
     // Check if SMS was sent successfully
-    if (responseData.messages && responseData.messages.length > 0) {
-      const messageResult = responseData.messages[0];
-      
-      if (messageResult.status === '0' || messageResult.status === 0) {
-        console.log(`✅ [VONAGE SMS SENT] To: ${phoneNumber} | Message ID: ${messageResult['message-id'] || messageResult.messageId}`);
-        return {
-          success: true,
-          method: 'vonage',
-          phone: phoneNumber,
-          messageId: messageResult['message-id'] || messageResult.messageId,
-          status: messageResult.status,
-          message: 'SMS sent successfully via Vonage',
-        };
-      } else {
-        const errorMessage = messageResult['error-text'] || messageResult.errorText || 'Unknown error';
-        throw new Error(`Vonage SMS failed: ${errorMessage}`);
-      }
+    // BulkGate API can return success in various formats
+    const responseData = response.data;
+    
+    // Check for success indicators
+    const isSuccess = 
+      response.status === 200 &&
+      (
+        responseData?.status === 'success' || 
+        responseData?.data?.status === 'success' ||
+        responseData?.response === 'success' ||
+        responseData?.data?.response === 'success' ||
+        (responseData?.data && !responseData?.data?.error && !responseData?.error) ||
+        (responseData && !responseData?.error && response.status === 200)
+      );
+
+    // Check for error indicators
+    const hasError = 
+      responseData?.status === 'error' ||
+      responseData?.data?.status === 'error' ||
+      responseData?.response === 'error' ||
+      responseData?.error ||
+      responseData?.data?.error;
+
+    if (isSuccess && !hasError) {
+      const messageId = responseData?.data?.sms_id || 
+                       responseData?.data?.id || 
+                       responseData?.sms_id || 
+                       responseData?.id ||
+                       responseData?.data?.message_id ||
+                       'N/A';
+      console.log(`✅ [BULKGATE SMS SENT] To: ${phoneNumber} | Message ID: ${messageId}`);
+      return {
+        success: true,
+        method: 'bulkgate',
+        phone: phoneNumber,
+        messageId: messageId,
+        message: 'SMS sent successfully via BulkGate',
+      };
     } else {
-      throw new Error('Vonage SMS failed: No response messages');
+      const errorMessage = responseData?.data?.error?.message || 
+                          responseData?.data?.message || 
+                          responseData?.message || 
+                          responseData?.error || 
+                          responseData?.data?.error || 
+                          'Unknown error';
+      console.error(`❌ [BULKGATE SMS FAILED] Response indicates failure: ${errorMessage}`);
+      console.error(`❌ [BULKGATE SMS FAILED] Full response:`, JSON.stringify(responseData, null, 2));
+      throw new Error(`BulkGate SMS failed: ${errorMessage}`);
     }
   } catch (error) {
-    console.error(`❌ [VONAGE SMS ERROR] to ${phone}: ${error.message}`);
-    throw new Error(`Failed to send SMS via Vonage: ${error.message}`);
+    // Handle axios errors with detailed logging
+    if (error.response) {
+      // The request was made and the server responded with a status code outside 2xx
+      const status = error.response.status;
+      const statusText = error.response.statusText;
+      const responseData = error.response.data;
+      let errorMessage = responseData?.message || responseData?.error || responseData?.data?.message || statusText || 'Unknown error';
+      
+      console.error(`❌ [BULKGATE SMS ERROR] HTTP ${status} ${statusText}`);
+      console.error(`❌ [BULKGATE SMS ERROR] Response:`, JSON.stringify(responseData, null, 2));
+      console.error(`❌ [BULKGATE SMS ERROR] Phone: ${phone}`);
+      
+      // Handle specific BulkGate error cases
+      if (status === 402 || status === 403) {
+        errorMessage = 'Insufficient balance or invalid credentials in BulkGate account. Please check your account balance and credentials.';
+      } else if (status === 401) {
+        errorMessage = 'Invalid BulkGate credentials. Please check your BULKGATE_APP_ID and BULKGATE_TOKEN.';
+      } else if (status === 400) {
+        errorMessage = responseData?.message || 'Invalid request format. Please check phone number format.';
+      } else if (status === 429) {
+        errorMessage = 'Rate limit exceeded. Please wait before sending more messages.';
+      }
+      
+      throw new Error(`Failed to send SMS via BulkGate (HTTP ${status}): ${errorMessage}`);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error(`❌ [BULKGATE SMS ERROR] No response received`);
+      console.error(`❌ [BULKGATE SMS ERROR] Phone: ${phone}`);
+      console.error(`❌ [BULKGATE SMS ERROR] Error: ${error.message}`);
+      throw new Error(`Failed to send SMS via BulkGate: No response from server - ${error.message}`);
+    } else {
+      // Something else happened
+      console.error(`❌ [BULKGATE SMS ERROR] ${error.message}`);
+      console.error(`❌ [BULKGATE SMS ERROR] Phone: ${phone}`);
+      if (error.stack) {
+        console.error(`❌ [BULKGATE SMS ERROR] Stack:`, error.stack);
+      }
+      throw new Error(`Failed to send SMS via BulkGate: ${error.message}`);
+    }
   }
 };
 

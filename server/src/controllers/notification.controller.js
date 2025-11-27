@@ -67,6 +67,23 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
     });
   }
 
+  // Filter out players without phone numbers
+  const playersWithPhones = unpaidPlayers.filter((player) => {
+    return player.phone && player.phone.trim().length > 0;
+  });
+
+  if (playersWithPhones.length === 0) {
+    return res.json({
+      success: true,
+      sent: 0,
+      failed: unpaidPlayers.length,
+      total: unpaidPlayers.length,
+      message: 'No players have phone numbers configured',
+    });
+  }
+
+  console.log(`📱 [REMINDERS] Preparing to send ${playersWithPhones.length} reminders (${unpaidPlayers.length - playersWithPhones.length} players without phone numbers)`);
+
   // Format month for display (e.g., "2025-12" -> "December 2025")
   const [year, monthNum] = month.split('-');
   const monthNames = [
@@ -91,7 +108,7 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
 
   // Send reminders
   const results = await Promise.allSettled(
-    unpaidPlayers.map(async (player) => {
+    playersWithPhones.map(async (player) => {
       const payment = payments.find((p) => String(p.playerId) === String(player._id));
       const amountDue = payment ? payment.amountDue : player.monthlyFee;
       const amountPaid = payment ? payment.amountPaid : 0;
@@ -101,6 +118,7 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
         customMessage ||
         `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -SportDue`;
 
+      console.log(`📱 [REMINDER] Sending to ${player.fullName} (${player.phone})`);
       await sendPaymentReminder(player.phone, message);
       return { playerId: player._id, playerName: player.fullName, phone: player.phone };
     })
@@ -108,12 +126,24 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
 
   const successful = results.filter((r) => r.status === 'fulfilled').length;
   const failed = results.filter((r) => r.status === 'rejected').length;
+  const playersWithoutPhones = unpaidPlayers.length - playersWithPhones.length;
+
+  // Log failed attempts with details
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      const player = playersWithPhones[index];
+      console.error(`❌ [REMINDER FAILED] ${player?.fullName} (${player?.phone}): ${result.reason?.message || 'Unknown error'}`);
+    }
+  });
+
+  console.log(`✅ [REMINDERS COMPLETE] Sent: ${successful}, Failed: ${failed}, No Phone: ${playersWithoutPhones}`);
 
   res.json({
     success: true,
     sent: successful,
     failed,
     total: unpaidPlayers.length,
+    playersWithoutPhones,
     month: monthDisplay,
     details: results.map((r) =>
       r.status === 'fulfilled' ? { ...r.value, success: true } : { error: r.reason.message, success: false }
