@@ -9,6 +9,8 @@ const {
 const {
   listPlayerPayments,
   createOrUpdatePayment,
+  updatePayment,
+  deletePayment,
 } = require('../controllers/payment.controller');
 const { authenticate, requireRole, USER_ROLES } = require('../middleware/auth');
 
@@ -18,6 +20,7 @@ router.use(authenticate, requireRole(USER_ROLES.COACH));
 
 // Specific routes should come before general :playerId route
 router.route('/:playerId/payments').get(listPlayerPayments).post(createOrUpdatePayment);
+router.route('/:playerId/payments/:paymentId').put(updatePayment).delete(deletePayment);
 router.route('/:playerId/attendance').get(listPlayerAttendance);
 router.post('/:playerId/reset-password', resetPlayerPassword);
 router.route('/:playerId').get(getPlayerDetails).put(updatePlayer).delete(deletePlayer);

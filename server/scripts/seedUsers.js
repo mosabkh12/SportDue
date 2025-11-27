@@ -5,11 +5,11 @@ const connectDB = require('../src/config/db');
 const Admin = require('../src/models/admin.model');
 const Coach = require('../src/models/coach.model');
 
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@coachpay.test';
-const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || 'coachpay-admin';
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@sportdue.test';
+const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || 'sportdue-admin';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'AdminPass123';
-const COACH_EMAIL = process.env.SEED_COACH_EMAIL || 'coach@coachpay.test';
-const COACH_USERNAME = process.env.SEED_COACH_USERNAME || 'coachpay-coach';
+const COACH_EMAIL = process.env.SEED_COACH_EMAIL || 'coach@sportdue.test';
+const COACH_USERNAME = process.env.SEED_COACH_USERNAME || 'sportdue-coach';
 const COACH_PASSWORD = process.env.SEED_COACH_PASSWORD || 'CoachPass123';
 
 const seedUsers = async () => {

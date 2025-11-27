@@ -84,7 +84,7 @@ const sendAutomaticPaymentReminders = async () => {
             const amountPaid = payment ? payment.amountPaid : 0;
             const remaining = amountDue - amountPaid;
 
-            const message = `Hi ${player.fullName.split(' ')[0]}, payment reminder from CoachPay. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -CoachPay`;
+            const message = `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -SportDue`;
 
             await sendPaymentReminder(player.phone, message);
             return { playerId: player._id, playerName: player.fullName, phone: player.phone };

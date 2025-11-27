@@ -43,9 +43,59 @@ const createOrUpdatePayment = catchAsync(async (req, res, next) => {
   res.json(payment);
 });
 
+const updatePayment = catchAsync(async (req, res, next) => {
+  const { paymentId } = req.params;
+  const { amountPaid, amountDue } = req.body;
+
+  await ensurePlayerOwnership(req.params.playerId, req.user.id);
+
+  const payment = await Payment.findOne({ _id: paymentId, playerId: req.params.playerId });
+
+  if (!payment) {
+    return next(new ApiError(404, 'Payment not found'));
+  }
+
+  if (typeof amountPaid !== 'undefined') {
+    payment.amountPaid = amountPaid;
+  }
+
+  if (typeof amountDue !== 'undefined') {
+    payment.amountDue = amountDue;
+  }
+
+  // Recalculate status
+  let status = PAYMENT_STATUS.UNPAID;
+  if (payment.amountPaid >= payment.amountDue) {
+    status = PAYMENT_STATUS.PAID;
+  } else if (payment.amountPaid > 0) {
+    status = PAYMENT_STATUS.PARTIAL;
+  }
+
+  payment.status = status;
+  await payment.save();
+
+  res.json(payment);
+});
+
+const deletePayment = catchAsync(async (req, res, next) => {
+  const { paymentId } = req.params;
+
+  await ensurePlayerOwnership(req.params.playerId, req.user.id);
+
+  const payment = await Payment.findOneAndDelete({ _id: paymentId, playerId: req.params.playerId });
+
+  if (!payment) {
+    return next(new ApiError(404, 'Payment not found'));
+  }
+
+  res.json({ message: 'Payment deleted successfully' });
+});
+
 module.exports = {
   listPlayerPayments,
   createOrUpdatePayment,
+  updatePayment,
+  deletePayment,
 };
 
 

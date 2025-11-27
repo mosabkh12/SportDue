@@ -18,7 +18,7 @@ const sendPaymentReminderController = catchAsync(async (req, res, next) => {
 
   const message =
     customMessage ||
-    `Hi ${player.fullName.split(' ')[0]}, payment reminder from CoachPay. Your payment for ${month || 'this month'} is due. Please pay soon. Thank you! -CoachPay`;
+    `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. Your payment for ${month || 'this month'} is due. Please pay soon. Thank you! -SportDue`;
 
   await sendPaymentReminder(player.phone, message);
 
@@ -99,7 +99,7 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
 
       const message =
         customMessage ||
-        `Hi ${player.fullName.split(' ')[0]}, payment reminder from CoachPay. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -CoachPay`;
+        `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -SportDue`;
 
       await sendPaymentReminder(player.phone, message);
       return { playerId: player._id, playerName: player.fullName, phone: player.phone };

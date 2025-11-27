@@ -7,7 +7,7 @@ const apiClient = axios.create({
 // Request interceptor to add token to requests
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('coachpay:token');
+    const token = localStorage.getItem('sportdue:token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,8 +36,8 @@ apiClient.interceptors.response.use(
       const isLoginPage = window.location.pathname === '/login';
       if (!isLoginPage) {
         // Clear invalid token
-        localStorage.removeItem('coachpay:token');
-        localStorage.removeItem('coachpay:user');
+        localStorage.removeItem('sportdue:token');
+        localStorage.removeItem('sportdue:user');
         // Silently redirect to login (use setTimeout to avoid interrupting hot reload)
         setTimeout(() => {
           if (window.location.pathname !== '/login') {

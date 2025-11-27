@@ -29,7 +29,10 @@ const DashboardLayout = () => {
   return (
     <div className="layout">
       <header className="layout__header">
-        <h1>CoachPay Web</h1>
+        <h1 className="logo">
+          <span className="logo__icon">SD</span>
+          <span className="logo__text">SportDue</span>
+        </h1>
         <nav>
           {links.map((item) => (
             <NavLink
@@ -42,7 +45,7 @@ const DashboardLayout = () => {
           ))}
         </nav>
         <button className="btn btn--ghost" type="button" onClick={handleLogout}>
-          Logout
+          Sign Out
         </button>
       </header>
       <main className="layout__content">

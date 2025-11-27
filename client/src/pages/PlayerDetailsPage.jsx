@@ -13,6 +13,9 @@ const PlayerDetailsPage = () => {
   const [paymentForm, setPaymentForm] = useState({ month: '', amountPaid: '', amountDue: '' });
   const [resetPasswordCredentials, setResetPasswordCredentials] = useState(null);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [editForm, setEditForm] = useState({ amountPaid: '', amountDue: '' });
+  const [deletingPayment, setDeletingPayment] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -49,8 +52,11 @@ const PlayerDetailsPage = () => {
   const handlePaymentSubmit = async (event) => {
     event.preventDefault();
     try {
+      // Convert date (YYYY-MM-DD) to month format (YYYY-MM) for backend
+      const monthFormat = paymentForm.month ? paymentForm.month.substring(0, 7) : paymentForm.month;
+      
       await apiClient.post(`/players/${playerId}/payments`, {
-        month: paymentForm.month,
+        month: monthFormat,
         amountPaid: Number(paymentForm.amountPaid),
         amountDue: paymentForm.amountDue ? Number(paymentForm.amountDue) : undefined,
       });
@@ -58,6 +64,67 @@ const PlayerDetailsPage = () => {
       fetchData();
     } catch (err) {
       handleApiError(err, setError);
+    }
+  };
+
+  const formatDateDisplay = (monthString) => {
+    // monthString is in format "YYYY-MM" or "YYYY-MM-DD"
+    if (!monthString) return '';
+    const parts = monthString.split('-');
+    if (parts.length >= 3) {
+      // Full date format: YYYY-MM-DD
+      const [year, month, day] = parts;
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${parseInt(day)} ${monthNames[parseInt(month) - 1]} ${year}`;
+    } else if (parts.length === 2) {
+      // Month format: YYYY-MM - show first day of month
+      const [year, month] = parts;
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `1 ${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+    return monthString;
+  };
+
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment._id);
+    setEditForm({
+      amountPaid: payment.amountPaid || '',
+      amountDue: payment.amountDue || '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPayment(null);
+    setEditForm({ amountPaid: '', amountDue: '' });
+  };
+
+  const handleSaveEdit = async (paymentId) => {
+    try {
+      await apiClient.put(`/players/${playerId}/payments/${paymentId}`, {
+        amountPaid: Number(editForm.amountPaid),
+        amountDue: Number(editForm.amountDue),
+      });
+      setEditingPayment(null);
+      setEditForm({ amountPaid: '', amountDue: '' });
+      fetchData();
+    } catch (err) {
+      handleApiError(err, setError);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeletingPayment(paymentId);
+    try {
+      await apiClient.delete(`/players/${playerId}/payments/${paymentId}`);
+      fetchData();
+    } catch (err) {
+      handleApiError(err, setError);
+    } finally {
+      setDeletingPayment(null);
     }
   };
 
@@ -241,71 +308,244 @@ const PlayerDetailsPage = () => {
       )}
 
       <section className="card">
-        <h3>Record payment</h3>
-        <form className="grid form-grid" onSubmit={handlePaymentSubmit}>
-          <label>
-            Month
-            <input
-              type="month"
-              name="month"
-              value={paymentForm.month}
-              onChange={handlePaymentChange}
-              required
-            />
-          </label>
-          <label>
-            Amount paid
-            <input
-              type="number"
-              name="amountPaid"
-              value={paymentForm.amountPaid}
-              onChange={handlePaymentChange}
-              min="0"
-              required
-            />
-          </label>
-          <label>
-            Amount due (optional)
-            <input
-              type="number"
-              name="amountDue"
-              value={paymentForm.amountDue}
-              onChange={handlePaymentChange}
-              min="0"
-            />
-          </label>
-          <button className="btn btn--primary" type="submit">
-            Save payment
-          </button>
+        <div className="card__header">
+          <h3>Record Payment</h3>
+          <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            Record a new payment transaction for this team member
+          </p>
+        </div>
+        <form onSubmit={handlePaymentSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <label>
+              Billing Period
+              <input
+                type="date"
+                name="month"
+                value={paymentForm.month}
+                onChange={handlePaymentChange}
+                required
+                style={{ width: '100%' }}
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Select the billing date
+              </small>
+            </label>
+            <label>
+              Amount Paid ($)
+              <input
+                type="number"
+                name="amountPaid"
+                value={paymentForm.amountPaid}
+                onChange={handlePaymentChange}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                required
+                style={{ width: '100%' }}
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Enter amount received
+              </small>
+            </label>
+            <label>
+              Amount Due ($)
+              <input
+                type="number"
+                name="amountDue"
+                value={paymentForm.amountDue}
+                onChange={handlePaymentChange}
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+                style={{ width: '100%' }}
+              />
+              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+                Total amount due (optional)
+              </small>
+            </label>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+            <button 
+              className="btn btn--primary" 
+              type="submit"
+              style={{ 
+                padding: '0.625rem 1.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease',
+                minWidth: '140px'
+              }}
+            >
+              Save Payment
+            </button>
+          </div>
         </form>
       </section>
 
       <section className="card">
-        <h3>Payment history</h3>
+        <div className="card__header">
+          <h3>Payment History</h3>
+          {!loading && payments.length > 0 && (
+            <span className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
+              {payments.length} {payments.length === 1 ? 'payment' : 'payments'} recorded
+            </span>
+          )}
+        </div>
         {error && <p className="error-text">{error}</p>}
         {!payments.length && !loading ? (
-          <p className="text-muted">No payments yet.</p>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <p className="text-muted" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No payment records found</p>
+            <p className="text-muted" style={{ fontSize: '0.9rem' }}>Payment records will appear here once transactions are recorded.</p>
+          </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Amount due</th>
-                <th>Amount paid</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment) => (
-                <tr key={payment._id}>
-                  <td>{payment.month}</td>
-                  <td>${payment.amountDue}</td>
-                  <td>${payment.amountPaid}</td>
-                  <td>{payment.status}</td>
+          <div style={{ overflowX: 'auto' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount Due</th>
+                  <th>Amount Paid</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment._id}>
+                    <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                      {formatDateDisplay(payment.month)}
+                    </td>
+                    {editingPayment === payment._id ? (
+                      <>
+                        <td>
+                          <input
+                            type="number"
+                            value={editForm.amountDue}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, amountDue: e.target.value }))}
+                            min="0"
+                            step="0.01"
+                            style={{ width: '100px', padding: '0.5rem' }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={editForm.amountPaid}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, amountPaid: e.target.value }))}
+                            min="0"
+                            step="0.01"
+                            style={{ width: '100px', padding: '0.5rem' }}
+                          />
+                        </td>
+                        <td>
+                          <span style={{
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            background: payment.status === 'paid' 
+                              ? 'rgba(34, 197, 94, 0.15)' 
+                              : payment.status === 'partial'
+                              ? 'rgba(251, 191, 36, 0.15)'
+                              : 'rgba(239, 68, 68, 0.15)',
+                            color: payment.status === 'paid' 
+                              ? '#22c55e' 
+                              : payment.status === 'partial'
+                              ? '#fbbf24'
+                              : '#ef4444',
+                            border: `1px solid ${payment.status === 'paid' 
+                              ? 'rgba(34, 197, 94, 0.3)' 
+                              : payment.status === 'partial'
+                              ? 'rgba(251, 191, 36, 0.3)'
+                              : 'rgba(239, 68, 68, 0.3)'}`
+                          }}>
+                            {payment.status === 'paid' ? 'Paid' : payment.status === 'partial' ? 'Partial' : 'Unpaid'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn--primary"
+                              type="button"
+                              onClick={() => handleSaveEdit(payment._id)}
+                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="btn btn--outline"
+                              type="button"
+                              onClick={handleCancelEdit}
+                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ fontWeight: '600' }}>${parseFloat(payment.amountDue || 0).toFixed(2)}</td>
+                        <td style={{ fontWeight: '600', color: '#22c55e' }}>${parseFloat(payment.amountPaid || 0).toFixed(2)}</td>
+                        <td>
+                          <span style={{
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            background: payment.status === 'paid' 
+                              ? 'rgba(34, 197, 94, 0.15)' 
+                              : payment.status === 'partial'
+                              ? 'rgba(251, 191, 36, 0.15)'
+                              : 'rgba(239, 68, 68, 0.15)',
+                            color: payment.status === 'paid' 
+                              ? '#22c55e' 
+                              : payment.status === 'partial'
+                              ? '#fbbf24'
+                              : '#ef4444',
+                            border: `1px solid ${payment.status === 'paid' 
+                              ? 'rgba(34, 197, 94, 0.3)' 
+                              : payment.status === 'partial'
+                              ? 'rgba(251, 191, 36, 0.3)'
+                              : 'rgba(239, 68, 68, 0.3)'}`
+                          }}>
+                            {payment.status === 'paid' ? 'Paid' : payment.status === 'partial' ? 'Partial' : 'Unpaid'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn--secondary"
+                              type="button"
+                              onClick={() => handleEditPayment(payment)}
+                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn--outline"
+                              type="button"
+                              onClick={() => handleDeletePayment(payment._id)}
+                              disabled={deletingPayment === payment._id}
+                              style={{ 
+                                fontSize: '0.85rem', 
+                                padding: '0.4rem 0.8rem',
+                                color: '#ef4444',
+                                borderColor: '#ef4444'
+                              }}
+                            >
+                              {deletingPayment === payment._id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

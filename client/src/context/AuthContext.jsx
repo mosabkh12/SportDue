@@ -4,26 +4,26 @@ import AuthContext from './AuthContext.js';
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const cached = localStorage.getItem('coachpay:user');
+    const cached = localStorage.getItem('sportdue:user');
     return cached ? JSON.parse(cached) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('coachpay:token'));
+  const [token, setToken] = useState(() => localStorage.getItem('sportdue:token'));
 
   useEffect(() => {
     if (token) {
       apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-      localStorage.setItem('coachpay:token', token);
+      localStorage.setItem('sportdue:token', token);
     } else {
       delete apiClient.defaults.headers.common.Authorization;
-      localStorage.removeItem('coachpay:token');
+      localStorage.removeItem('sportdue:token');
     }
   }, [token]);
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem('coachpay:user', JSON.stringify(user));
+      localStorage.setItem('sportdue:user', JSON.stringify(user));
     } else {
-      localStorage.removeItem('coachpay:user');
+      localStorage.removeItem('sportdue:user');
     }
   }, [user]);
 

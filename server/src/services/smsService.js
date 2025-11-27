@@ -54,7 +54,7 @@ const sendPaymentReminder = async (phone, message) => {
     // Send SMS via Vonage
     const responseData = await vonage.sms.send({
       to: phoneNumber,
-      from: vonageFromNumber || 'CoachPay',
+      from: vonageFromNumber || 'SportDue',
       text: message,
     });
 

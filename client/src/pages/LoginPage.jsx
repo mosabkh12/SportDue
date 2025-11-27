@@ -21,7 +21,7 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const role = await login(form);
-      notifications.success(`Welcome back! Successfully logged in as ${role}.`);
+      notifications.success(`Welcome back! You have been successfully authenticated as ${role}.`);
       
       // Small delay to show notification before navigation
       setTimeout(() => {
@@ -35,7 +35,7 @@ const LoginPage = () => {
       }, 300);
     } catch (err) {
       setError(err.message);
-      notifications.error(err.message || 'Login failed. Please check your credentials.');
+      notifications.error(err.message || 'Authentication failed. Please verify your credentials and try again.');
     } finally {
       setLoading(false);
     }
@@ -45,25 +45,25 @@ const LoginPage = () => {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-card__hero">
-          <p className="eyebrow">Welcome back</p>
-          <h2>CoachPay Web</h2>
-          <p>Track payments, attendance, and performance with a single, elegant dashboard.</p>
+          <p className="eyebrow">Welcome Back</p>
+          <h2>SportDue</h2>
+          <p>Streamline your coaching operations with comprehensive payment tracking, attendance management, and performance analytics.</p>
           <ul>
-            <li>⚡ Real-time payment summaries</li>
-            <li>📱 Smart reminders for parents and players</li>
-            <li>✅ Attendance tracking with signatures</li>
+            <li>Real-time Payment Tracking</li>
+            <li>Automated Payment Reminders</li>
+            <li>Digital Attendance Management</li>
           </ul>
         </div>
         <form onSubmit={handleSubmit}>
-          <h3>Sign in</h3>
-          <p className="text-muted">Email/username & password, that's it.</p>
+          <h3>Sign In</h3>
+          <p className="text-muted">Enter your credentials to access your account.</p>
 
           <label>
-            Email or username
+            Email Address or Username
             <input
               type="text"
               name="identifier"
-              placeholder="email, username, or player username"
+              placeholder="Enter your email address or username"
               value={form.identifier}
               onChange={handleChange}
               required
@@ -75,7 +75,7 @@ const LoginPage = () => {
             <input
               type="password"
               name="password"
-              placeholder="********"
+              placeholder="Enter your password"
               value={form.password}
               onChange={handleChange}
               required
@@ -85,7 +85,7 @@ const LoginPage = () => {
           {error && <p className="error-text">{error}</p>}
 
           <button className="btn btn--primary" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
       </div>
