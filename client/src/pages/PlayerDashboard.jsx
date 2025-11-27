@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import useAuth from '../hooks/useAuth';
 import StatCard from '../components/StatCard.jsx';
+import '../styles/pages/PlayerDashboard.css';
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
@@ -82,49 +83,15 @@ const PlayerDashboard = () => {
           <h2>Welcome, {player?.fullName || user?.fullName || 'Player'}</h2>
           <p className="text-muted">View your payment history and attendance records.</p>
           {player?.group && (
-            <div style={{ 
-              marginTop: '1rem', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.75rem',
-              flexWrap: 'wrap'
-            }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                background: 'rgba(59, 130, 246, 0.15)',
-                borderRadius: '8px',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#93c5fd'
-              }}>
+            <div className="badge-container">
+              <div className="group-badge">
                 <span>👥</span>
                 <span>{player.group.name}</span>
               </div>
               {player.group.sportType && (
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  background: player.group.sportType === 'basketball' 
-                    ? 'rgba(239, 68, 68, 0.15)' 
-                    : 'rgba(34, 197, 94, 0.15)',
-                  borderRadius: '8px',
-                  border: `1px solid ${player.group.sportType === 'basketball' 
-                    ? 'rgba(239, 68, 68, 0.3)' 
-                    : 'rgba(34, 197, 94, 0.3)'}`,
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  color: player.group.sportType === 'basketball' 
-                    ? '#fca5a5' 
-                    : '#86efac'
-                }}>
+                <div className={`sport-badge sport-badge--${player.group.sportType}`}>
                   <span>{player.group.sportType === 'basketball' ? '🏀' : '⚽'}</span>
-                  <span style={{ textTransform: 'capitalize' }}>{player.group.sportType}</span>
+                  <span>{player.group.sportType}</span>
                 </div>
               )}
             </div>
@@ -167,42 +134,28 @@ const PlayerDashboard = () => {
 
           <section className="card">
             <h3>Contact Information</h3>
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
-              <p className="text-muted">
-                <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Phone:</strong>
+            <div className="contact-grid">
+              <p className="text-muted contact-item">
+                <strong className="contact-label">Phone:</strong>
                 {player.phone}
               </p>
               {player?.group && (
-                <p className="text-muted">
-                  <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Group:</strong>
+                <p className="text-muted contact-item">
+                  <strong className="contact-label">Group:</strong>
                   {player.group.name}
                   {player.group.sportType && (
-                    <span style={{ 
-                      marginLeft: '0.5rem',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.85rem',
-                      background: player.group.sportType === 'basketball' 
-                        ? 'rgba(239, 68, 68, 0.15)' 
-                        : 'rgba(34, 197, 94, 0.15)',
-                      border: `1px solid ${player.group.sportType === 'basketball' 
-                        ? 'rgba(239, 68, 68, 0.3)' 
-                        : 'rgba(34, 197, 94, 0.3)'}`,
-                      color: player.group.sportType === 'basketball' 
-                        ? '#fca5a5' 
-                        : '#86efac'
-                    }}>
+                    <span className={`contact-inline-badge contact-inline-badge--${player.group.sportType}`}>
                       {player.group.sportType === 'basketball' ? '🏀' : '⚽'} {player.group.sportType.charAt(0).toUpperCase() + player.group.sportType.slice(1)}
                     </span>
                   )}
                 </p>
               )}
               {player.notes && (
-                <div style={{ marginTop: '0.5rem' }}>
+                <div className="notes-section">
                   <p className="text-muted">
-                    <strong style={{ color: 'var(--text-primary)', marginRight: '0.5rem' }}>Notes:</strong>
+                    <strong className="contact-label">Notes:</strong>
                   </p>
-                  <p style={{ marginTop: '0.25rem' }}>{player.notes}</p>
+                  <p className="notes-text">{player.notes}</p>
                 </div>
               )}
             </div>
@@ -233,27 +186,7 @@ const PlayerDashboard = () => {
                       <td>${parseFloat(payment.amountDue || 0).toFixed(2)}</td>
                       <td>${parseFloat(payment.amountPaid || 0).toFixed(2)}</td>
                       <td>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: '12px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            color:
-                              payment.status === 'paid'
-                                ? '#10b981'
-                                : payment.status === 'partial'
-                                ? '#f59e0b'
-                                : '#ef4444',
-                            backgroundColor:
-                              payment.status === 'paid'
-                                ? 'rgba(16, 185, 129, 0.1)'
-                                : payment.status === 'partial'
-                                ? 'rgba(245, 158, 11, 0.1)'
-                                : 'rgba(239, 68, 68, 0.1)',
-                          }}
-                        >
+                        <span className={`payment-status-badge payment-status-badge--${payment.status}`}>
                           {payment.status === 'paid'
                             ? '✓ Paid'
                             : payment.status === 'partial'
@@ -278,14 +211,7 @@ const PlayerDashboard = () => {
               <p className="text-muted">No attendance records yet.</p>
             ) : (
               <>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '1rem',
-                    marginBottom: '1.5rem',
-                  }}
-                >
+                <div className="attendance-stats-grid">
                   <div className="card stat-card" style={{ borderTopColor: '#10b981', padding: '1rem' }}>
                     <p className="stat-card__label">Present days</p>
                     <p className="stat-card__value" style={{ color: '#10b981', fontSize: '1.5rem' }}>
@@ -305,7 +231,7 @@ const PlayerDashboard = () => {
                     </p>
                   </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrapper">
                   <table>
                     <thead>
                       <tr>
@@ -326,27 +252,11 @@ const PlayerDashboard = () => {
                         return (
                           <tr
                             key={record._id}
-                            style={{
-                              backgroundColor: isPresent
-                                ? 'rgba(16, 185, 129, 0.05)'
-                                : 'rgba(239, 68, 68, 0.05)',
-                            }}
+                            className={`attendance-row attendance-row--${isPresent ? 'present' : 'absent'}`}
                           >
                             <td style={{ fontWeight: '600' }}>{formattedDate}</td>
                             <td>
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '0.25rem 0.75rem',
-                                  borderRadius: '12px',
-                                  fontSize: '0.85rem',
-                                  fontWeight: '600',
-                                  color: isPresent ? '#10b981' : '#ef4444',
-                                  backgroundColor: isPresent
-                                    ? 'rgba(16, 185, 129, 0.1)'
-                                    : 'rgba(239, 68, 68, 0.1)',
-                                }}
-                              >
+                              <span className={`attendance-status-badge attendance-status-badge--${isPresent ? 'present' : 'absent'}`}>
                                 {isPresent ? '✓ Present' : '✗ Absent'}
                               </span>
                             </td>

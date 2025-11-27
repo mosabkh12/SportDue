@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { handleApiError } from '../utils/errorHandler';
 import { useNotifications } from '../context/NotificationContext';
+import '../styles/pages/GroupDetailsPage.css';
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams();
@@ -21,7 +22,6 @@ const GroupDetailsPage = () => {
   const [reminderMessage, setReminderMessage] = useState('');
   const [sendingReminders, setSendingReminders] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
-  const [newPlayerCredentials, setNewPlayerCredentials] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -81,20 +81,11 @@ const GroupDetailsPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError(null);
-    setNewPlayerCredentials(null);
     try {
-      const response = await apiClient.post(`/groups/${groupId}/players`, {
+      await apiClient.post(`/groups/${groupId}/players`, {
         ...form,
         monthlyFee: Number(form.monthlyFee),
       });
-      
-      // Display credentials if they were generated
-      if (response.data.credentials) {
-        setNewPlayerCredentials({
-          username: response.data.credentials.username,
-          password: response.data.credentials.password,
-        });
-      }
       
       // Reset form but keep the default monthly fee pre-filled
       setForm({
@@ -103,8 +94,8 @@ const GroupDetailsPage = () => {
         monthlyFee: data.group?.defaultMonthlyFee || '',
         notes: '',
       });
-      notifications.success('Team member successfully enrolled. Account credentials have been generated.');
-      // Refresh to show the new player with credentials
+      notifications.success('Team member successfully enrolled.');
+      // Refresh to show the new player
       setTimeout(() => {
         fetchDetails();
         setActiveTab('players');
@@ -258,35 +249,11 @@ const GroupDetailsPage = () => {
   return (
     <div className="page">
       <section className="page-header">
-        <div style={{ flex: 1 }}>
+        <div className="page-header-content">
           <button
             onClick={() => navigate(-1)}
-            className="btn btn--outline"
+            className="btn btn--outline btn-back"
             type="button"
-            style={{
-              marginBottom: '1rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'translateX(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
           >
             <span>←</span>
             <span>Back</span>
@@ -297,20 +264,15 @@ const GroupDetailsPage = () => {
             {data.group?.description || 'Comprehensive management dashboard for team roster, financial tracking, and attendance monitoring.'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Link className="btn btn--primary" to={`/coach/groups/${groupId}/attendance`} style={{ whiteSpace: 'nowrap' }}>
+        <div className="page-header-actions">
+          <Link className="btn btn--primary" to={`/coach/groups/${groupId}/attendance`}>
             📅 Manage Attendance
           </Link>
           <button
-            className="btn btn--outline"
+            className="btn btn--outline btn-delete-group"
             type="button"
             onClick={handleDeleteGroup}
             disabled={deletingGroup}
-            style={{ 
-              whiteSpace: 'nowrap',
-              color: '#ef4444',
-              borderColor: '#ef4444'
-            }}
           >
             {deletingGroup ? 'Deleting...' : '🗑️ Delete Group'}
           </button>
@@ -318,172 +280,33 @@ const GroupDetailsPage = () => {
       </section>
 
       {/* Tab Navigation */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '0.25rem', 
-        marginBottom: '2rem', 
-        backgroundColor: 'rgba(17, 24, 39, 0.4)',
-        borderRadius: '12px',
-        padding: '0.5rem',
-        border: '1px solid rgba(55, 65, 81, 0.5)',
-        overflowX: 'auto',
-        scrollbarWidth: 'thin'
-      }}>
+      <div className="tab-navigation">
         <button
           onClick={() => setActiveTab('overview')}
-          className="btn"
-          style={{
-            padding: '0.875rem 1.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'overview' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            background: activeTab === 'overview' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            color: activeTab === 'overview' ? '#93c5fd' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: activeTab === 'overview' ? '700' : '500',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            whiteSpace: 'nowrap',
-            fontSize: '0.95rem',
-            position: 'relative',
-            boxShadow: activeTab === 'overview' 
-              ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-              : 'none',
-            transform: activeTab === 'overview' ? 'translateY(-1px)' : 'none'
-          }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'overview') {
-              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'overview') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-            }
-          }}
+          className={`tab-button ${activeTab === 'overview' ? 'tab-button--active' : ''}`}
         >
-          <span style={{ marginRight: '0.5rem', fontSize: '1.1rem' }}>📊</span>
+          <span className="tab-icon">📊</span>
           Overview
         </button>
         <button
           onClick={() => setActiveTab('configuration')}
-          className="btn"
-          style={{
-            padding: '0.875rem 1.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'configuration' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            background: activeTab === 'configuration' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            color: activeTab === 'configuration' ? '#93c5fd' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: activeTab === 'configuration' ? '700' : '500',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            whiteSpace: 'nowrap',
-            fontSize: '0.95rem',
-            boxShadow: activeTab === 'configuration' 
-              ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-              : 'none',
-            transform: activeTab === 'configuration' ? 'translateY(-1px)' : 'none'
-          }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'configuration') {
-              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'configuration') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-            }
-          }}
+          className={`tab-button ${activeTab === 'configuration' ? 'tab-button--active' : ''}`}
         >
-          <span style={{ marginRight: '0.5rem', fontSize: '1.1rem' }}>⚙️</span>
+          <span className="tab-icon">⚙️</span>
           Configuration
         </button>
         <button
           onClick={() => setActiveTab('reminders')}
-          className="btn"
-          style={{
-            padding: '0.875rem 1.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'reminders' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            background: activeTab === 'reminders' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            color: activeTab === 'reminders' ? '#93c5fd' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: activeTab === 'reminders' ? '700' : '500',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            whiteSpace: 'nowrap',
-            fontSize: '0.95rem',
-            boxShadow: activeTab === 'reminders' 
-              ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-              : 'none',
-            transform: activeTab === 'reminders' ? 'translateY(-1px)' : 'none'
-          }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'reminders') {
-              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'reminders') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-            }
-          }}
+          className={`tab-button ${activeTab === 'reminders' ? 'tab-button--active' : ''}`}
         >
-          <span style={{ marginRight: '0.5rem', fontSize: '1.1rem' }}>📨</span>
+          <span className="tab-icon">📨</span>
           Payment Reminders
         </button>
         <button
           onClick={() => setActiveTab('players')}
-          className="btn"
-          style={{
-            padding: '0.875rem 1.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'players' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            background: activeTab === 'players' 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25))' 
-              : 'transparent',
-            color: activeTab === 'players' ? '#93c5fd' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: activeTab === 'players' ? '700' : '500',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            whiteSpace: 'nowrap',
-            fontSize: '0.95rem',
-            boxShadow: activeTab === 'players' 
-              ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-              : 'none',
-            transform: activeTab === 'players' ? 'translateY(-1px)' : 'none'
-          }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'players') {
-              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'players') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-            }
-          }}
+          className={`tab-button ${activeTab === 'players' ? 'tab-button--active' : ''}`}
         >
-          <span style={{ marginRight: '0.5rem', fontSize: '1.1rem' }}>👥</span>
+          <span className="tab-icon">👥</span>
           Team Members ({data.players.length})
         </button>
       </div>
@@ -887,7 +710,7 @@ const GroupDetailsPage = () => {
                   placeholder="Optional: Include additional details such as parent/guardian contact information, medical considerations, special accommodations, or other relevant notes"
                 />
               </label>
-              <button className="btn btn--primary" type="submit" style={{ gridColumn: '1 / -1' }}>
+              <button className="btn btn--primary btn-full-width" type="submit">
                 ➕ Add Team Member
               </button>
             </form>
@@ -900,12 +723,12 @@ const GroupDetailsPage = () => {
             </div>
             {error && <p className="error-text">{error}</p>}
             {!data.players.length && !loading ? (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-                <p className="text-muted" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No team members enrolled in this group</p>
-                <p className="text-muted" style={{ fontSize: '0.9rem' }}>Begin by registering your first team member using the enrollment form above.</p>
+              <div className="empty-state">
+                <p className="text-muted empty-state-title">No team members enrolled in this group</p>
+                <p className="text-muted empty-state-subtitle">Begin by registering your first team member using the enrollment form above.</p>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <div className="table-wrapper">
                 <table>
                   <thead>
                     <tr>
@@ -920,83 +743,25 @@ const GroupDetailsPage = () => {
                   <tbody>
                     {data.players.map((player) => (
                       <tr key={player._id}>
-                        <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{player.fullName}</td>
+                        <td className="table-cell-bold">{player.fullName}</td>
                         <td>
                           {player.username ? (
-                            <code style={{ 
-                              padding: '0.625rem 1rem', 
-                              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.25))',
-                              backdropFilter: 'blur(10px)',
-                              borderRadius: '10px',
-                              fontSize: '0.9rem',
-                              fontFamily: "'Monaco', 'Courier New', monospace",
-                              display: 'inline-block',
-                              fontWeight: '700',
-                              color: '#10b981',
-                              border: '1.5px solid rgba(34, 197, 94, 0.4)',
-                              letterSpacing: '0.08em',
-                              boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(34, 197, 94, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
-                              e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.6)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-                              e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-                            }}
-                            >{player.username}</code>
+                            <code className="credential-badge--username">{player.username}</code>
                           ) : (
-                            <span className="text-muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>No username assigned</span>
+                            <span className="text-muted text-small-italic">No username assigned</span>
                           )}
                         </td>
                         <td>
                           {player.displayPassword ? (
-                            <code style={{ 
-                              padding: '0.625rem 1rem', 
-                              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))',
-                              backdropFilter: 'blur(10px)',
-                              borderRadius: '10px',
-                              fontSize: '0.9rem',
-                              fontFamily: "'Monaco', 'Courier New', monospace",
-                              display: 'inline-block',
-                              fontWeight: '700',
-                              color: '#fbbf24',
-                              border: '1.5px solid rgba(245, 158, 11, 0.5)',
-                              letterSpacing: '0.08em',
-                              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-                              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.7)';
-                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(251, 191, 36, 0.3), rgba(234, 179, 8, 0.35))';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
-                              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))';
-                            }}
-                            >{player.displayPassword}</code>
+                            <code className="credential-badge--password">{player.displayPassword}</code>
                           ) : (
-                            <span className="text-muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>No password set</span>
+                            <span className="text-muted text-small-italic">No password set</span>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.95rem' }}>{player.phone}</td>
-                        <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${parseFloat(player.monthlyFee).toFixed(2)}</td>
+                        <td className="table-cell-monospace">{player.phone}</td>
+                        <td className="table-cell-bold">${parseFloat(player.monthlyFee).toFixed(2)}</td>
                         <td>
-                          <Link className="btn btn--secondary" to={`/coach/players/${player._id}`} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                          <Link className="btn btn--secondary btn-small" to={`/coach/players/${player._id}`}>
                             View Details
                           </Link>
                         </td>
@@ -1010,128 +775,39 @@ const GroupDetailsPage = () => {
         </div>
       )}
 
-      {/* Credentials Modals */}
-      {newPlayerCredentials && (
-        <section className="card success-banner">
-          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>✓ Team Member Successfully Registered</h3>
-          <p style={{ fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '1rem' }}>Account credentials have been automatically generated. Please securely store these credentials immediately, as the password will not be displayed again after closing this dialog:</p>
-          <div style={{ padding: '1.5rem', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(34, 197, 94, 0.4)' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Username:</label>
-              <code style={{ 
-                padding: '0.875rem 1.25rem', 
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.25))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '12px',
-                fontSize: '1.05rem',
-                display: 'block',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.08em',
-                color: '#10b981',
-                border: '1.5px solid rgba(34, 197, 94, 0.4)',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>{newPlayerCredentials.username}</code>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Password:</label>
-              <code style={{ 
-                padding: '0.875rem 1.25rem', 
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.25), rgba(234, 179, 8, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '12px',
-                fontSize: '1.05rem',
-                display: 'block',
-                fontFamily: "'Monaco', 'Courier New', monospace",
-                letterSpacing: '0.08em',
-                color: '#fbbf24',
-                border: '1.5px solid rgba(245, 158, 11, 0.5)',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>{newPlayerCredentials.password}</code>
-            </div>
-          </div>
-          <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem', fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.7)' }}>
-            ⚠️ Important: Please copy and securely share these credentials with the team member. The password will not be accessible after closing this notification.
-          </p>
-          <button
-            className="btn btn--primary"
-            type="button"
-            onClick={() => setNewPlayerCredentials(null)}
-          >
-            Acknowledge & Close
-          </button>
-        </section>
-      )}
-
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }}>
-          <section className="card" style={{ 
-            maxWidth: '500px',
-            width: '100%',
-            background: 'var(--bg-secondary)',
-            border: '2px solid rgba(239, 68, 68, 0.5)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
-          }}>
-            <h3 style={{ color: '#ef4444', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="delete-modal-overlay">
+          <section className="delete-modal-content">
+            <h3 className="delete-modal-title">
               ⚠️ Delete Training Group
             </h3>
-            <p style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+            <p className="delete-modal-body">
               Are you sure you want to delete <strong>"{data.group?.name || 'this group'}"</strong>? This will permanently delete:
             </p>
-            <ul style={{ 
-              listStyle: 'disc', 
-              paddingLeft: '1.5rem', 
-              marginBottom: '1.5rem',
-              color: 'var(--text-secondary)',
-              lineHeight: '1.8'
-            }}>
+            <ul className="delete-modal-list">
               <li>The training group</li>
               <li>All team members ({data.players.length} {data.players.length === 1 ? 'member' : 'members'})</li>
               <li>All payment records</li>
               <li>All attendance records</li>
             </ul>
-            <p style={{ color: '#ef4444', fontWeight: '700', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+            <p className="delete-modal-warning">
               ⚠️ This action cannot be undone!
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <div className="delete-modal-actions">
               <button
                 className="btn btn--outline"
                 type="button"
                 onClick={handleCancelDelete}
                 disabled={deletingGroup}
-                style={{ minWidth: '100px' }}
               >
                 Cancel
               </button>
               <button
-                className="btn btn--secondary"
+                className="btn btn-danger"
                 type="button"
                 onClick={handleDeleteGroup}
                 disabled={deletingGroup}
-                style={{ 
-                  minWidth: '120px',
-                  backgroundColor: '#ef4444',
-                  borderColor: '#ef4444',
-                  color: 'white'
-                }}
               >
                 {deletingGroup ? 'Deleting...' : 'Delete Group'}
               </button>

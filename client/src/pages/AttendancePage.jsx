@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useNotifications } from '../context/NotificationContext';
 import { handleApiError } from '../utils/errorHandler';
+import '../styles/pages/AttendancePage.css';
 
 const AttendancePage = () => {
   const { groupId } = useParams();
@@ -264,32 +265,8 @@ const AttendancePage = () => {
         <div>
           <button
             onClick={() => navigate(-1)}
-            className="btn btn--outline"
+            className="btn btn--outline btn-back"
             type="button"
-            style={{
-              marginBottom: '1rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'translateX(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
           >
             <span>←</span>
             <span>Back</span>
@@ -326,23 +303,13 @@ const AttendancePage = () => {
             type="button"
             className="btn btn--outline"
             onClick={() => setShowScheduleConfig(!showScheduleConfig)}
-            style={{ whiteSpace: 'nowrap' }}
           >
             {showScheduleConfig ? '✕ Close Configuration' : '⚙️ Configure Schedule'}
           </button>
         </div>
 
         {showScheduleConfig && (
-          <div
-            style={{
-              marginTop: '1.5rem',
-              padding: '1.5rem',
-              backgroundColor: 'rgba(59, 130, 246, 0.08)',
-              borderRadius: '12px',
-              border: '2px solid rgba(59, 130, 246, 0.3)',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)',
-            }}
-          >
+          <div className="schedule-config-box">
             <div style={{ marginBottom: '1.5rem' }}>
               <h4 style={{ 
                 fontSize: '1.125rem', 
@@ -365,48 +332,13 @@ const AttendancePage = () => {
               <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                 Training Days
               </label>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-                gap: '0.75rem',
-                padding: '1rem',
-                backgroundColor: 'rgba(17, 24, 39, 0.4)',
-                borderRadius: '10px',
-                border: '1px solid rgba(55, 65, 81, 0.5)'
-              }}>
+              <div className="schedule-days-grid">
                 {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
                   const isSelected = trainingSchedule.trainingDays.includes(index);
                   return (
                     <label
                       key={index}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '8px',
-                        border: `2px solid ${isSelected ? '#3b82f6' : 'rgba(107, 114, 128, 0.4)'}`,
-                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        fontWeight: isSelected ? '700' : '500',
-                        color: isSelected ? '#60a5fa' : 'var(--text-secondary)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
-                          e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.borderColor = 'rgba(107, 114, 128, 0.4)';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
+                      className={`day-checkbox-label ${isSelected ? 'day-checkbox-label--selected' : 'day-checkbox-label--unselected'}`}
                     >
                       <input
                         type="checkbox"
@@ -424,50 +356,28 @@ const AttendancePage = () => {
                             }));
                           }
                         }}
-                        style={{ 
-                          cursor: 'pointer',
-                          width: '18px',
-                          height: '18px',
-                          accentColor: '#3b82f6'
-                        }}
+                        className="day-checkbox"
                       />
-                      <span style={{ fontSize: '0.9rem' }}>{day.substring(0, 3)}</span>
+                      <span>{day.substring(0, 3)}</span>
                       {isSelected && (
-                        <span style={{ 
-                          position: 'absolute', 
-                          top: '4px', 
-                          right: '4px',
-                          fontSize: '0.75rem',
-                          color: '#3b82f6'
-                        }}>✓</span>
+                        <span className="day-checkmark">✓</span>
                       )}
                     </label>
                   );
                 })}
               </div>
               {trainingSchedule.trainingDays.length > 0 && (
-                <div style={{ 
-                  marginTop: '0.75rem', 
-                  padding: '0.75rem', 
-                  backgroundColor: 'rgba(34, 197, 94, 0.1)', 
-                  borderRadius: '8px',
-                  border: '1px solid rgba(34, 197, 94, 0.3)'
-                }}>
-                  <small style={{ color: '#22c55e', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="day-selected-indicator">
+                  <small className="day-selected-text">
                     ✓ {trainingSchedule.trainingDays.length} {trainingSchedule.trainingDays.length === 1 ? 'day' : 'days'} selected: {trainingSchedule.trainingDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}
                   </small>
                 </div>
               )}
             </div>
 
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '1rem',
-              marginBottom: '1.5rem'
-            }}>
-              <label style={{ display: 'block' }}>
-                <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+            <div className="time-inputs-grid">
+              <label className="time-input-label">
+                <div className="time-input-label-text">
                   Start Time
                 </div>
                 <input
@@ -479,20 +389,11 @@ const AttendancePage = () => {
                       trainingTime: { ...prev.trainingTime, startTime: e.target.value }
                     }));
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(55, 65, 81, 0.5)',
-                    backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                    color: 'var(--text-primary)',
-                    fontSize: '1rem',
-                    fontWeight: '600'
-                  }}
+                  className="time-input"
                 />
               </label>
-              <label style={{ display: 'block' }}>
-                <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+              <label className="time-input-label">
+                <div className="time-input-label-text">
                   End Time
                 </div>
                 <input
@@ -504,22 +405,13 @@ const AttendancePage = () => {
                       trainingTime: { ...prev.trainingTime, endTime: e.target.value }
                     }));
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(55, 65, 81, 0.5)',
-                    backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                    color: 'var(--text-primary)',
-                    fontSize: '1rem',
-                    fontWeight: '600'
-                  }}
+                  className="time-input"
                 />
               </label>
             </div>
 
             <button
-              className="btn btn--primary"
+              className="btn btn--primary save-schedule-btn"
               type="button"
               onClick={handleUpdateTrainingSchedule}
               disabled={
@@ -528,44 +420,32 @@ const AttendancePage = () => {
                  JSON.stringify(trainingSchedule.trainingTime) === JSON.stringify(group?.trainingTime || { startTime: '18:00', endTime: '19:30' })) ||
                 trainingSchedule.trainingDays.length === 0
               }
-              style={{ 
-                width: '100%',
-                padding: '0.875rem 1.5rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '8px',
-                boxShadow: trainingSchedule.trainingDays.length > 0 ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
             >
               {updatingSchedule ? 'Saving Schedule...' : '💾 Save Training Schedule'}
             </button>
           </div>
         )}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '1.5rem' }}>
-          <label style={{ flex: '1', minWidth: '200px' }}>
+        <div className="date-selection-row">
+          <label className="date-input-wrapper">
             Date
             <input 
               type="date" 
               value={date} 
               onChange={(event) => setDate(event.target.value)}
-              style={{
-                borderColor: isTrainingDay(date) ? '#3b82f6' : trainingDays.length > 0 ? '#ef4444' : 'rgba(55, 65, 81, 0.5)',
-                borderWidth: '2px'
-              }}
+              className={isTrainingDay(date) && trainingDays.length > 0 ? 'date-input--training-day' : !isTrainingDay(date) && trainingDays.length > 0 ? 'date-input--not-training-day' : ''}
             />
             {!isTrainingDay(date) && trainingDays.length > 0 && (
-              <small style={{ color: '#ef4444', fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="date-indicator date-indicator--not-training">
                 ⚠️ This date is not a scheduled training day
               </small>
             )}
             {isTrainingDay(date) && trainingDays.length > 0 && (
-              <small style={{ color: '#3b82f6', fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="date-indicator date-indicator--training">
                 ✓ Scheduled training day
               </small>
             )}
           </label>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="date-nav-buttons">
             {trainingDays.length > 0 ? (
               <>
                 <button
@@ -625,23 +505,13 @@ const AttendancePage = () => {
         </div>
         {notice && <p className="error-text" style={{ marginTop: '1rem' }}>{notice}</p>}
         {successMessage && (
-          <p
-            style={{
-              marginTop: '1rem',
-              color: '#10b981',
-              fontWeight: '600',
-              backgroundColor: '#d1fae5',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              border: '1px solid #10b981',
-            }}
-          >
+          <p className="success-message">
             ✓ {successMessage}
           </p>
         )}
       </section>
 
-      <section className="grid stats-grid" style={{ marginBottom: '1rem' }}>
+      <section className="grid stats-grid attendance-stats-section">
         <div className="card stat-card" style={{ borderTopColor: '#10b981' }}>
           <p className="stat-card__label">Present</p>
           <p className="stat-card__value" style={{ color: '#10b981' }}>
@@ -681,39 +551,28 @@ const AttendancePage = () => {
           <p className="text-muted">This group has no players yet.</p>
         ) : (
           <>
-            <div
-              style={{
-                display: 'flex',
-                gap: '1rem',
-                marginBottom: '1.5rem',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-              }}
-            >
-              <label style={{ flex: '1', minWidth: '250px' }}>
+            <div className="player-search-row">
+              <label className="player-search-input">
                 Search players
                 <input
                   type="text"
                   placeholder="Type to search by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ width: '100%' }}
                 />
               </label>
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+              <div className="quick-actions">
                 <button
                   type="button"
-                  className="btn btn--outline"
+                  className="btn btn--outline btn-small"
                   onClick={markAllPresent}
-                  style={{ fontSize: '0.85rem' }}
                 >
                   ✓ Mark all present
                 </button>
                 <button
                   type="button"
-                  className="btn btn--outline"
+                  className="btn btn--outline btn-small"
                   onClick={markAllAbsent}
-                  style={{ fontSize: '0.85rem' }}
                 >
                   ✗ Mark all absent
                 </button>
@@ -729,7 +588,7 @@ const AttendancePage = () => {
             {!filteredPlayers.length ? (
               <p className="text-muted">No players found matching "{searchQuery}"</p>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <div className="table-wrapper">
                 <table>
                   <thead>
                     <tr>
@@ -746,30 +605,14 @@ const AttendancePage = () => {
                       return (
                         <tr
                           key={player._id}
-                          style={{
-                            backgroundColor: isPresent
-                              ? 'rgba(16, 185, 129, 0.05)'
-                              : isAbsent
-                              ? 'rgba(239, 68, 68, 0.05)'
-                              : 'transparent',
-                          }}
+                          className={`attendance-row ${isPresent ? 'attendance-row--present' : isAbsent ? 'attendance-row--absent' : ''}`}
                         >
-                          <td style={{ fontWeight: '600' }}>{player.fullName}</td>
+                          <td className="table-cell-bold">{player.fullName}</td>
                           <td>
                             <select
                               value={status}
                               onChange={(e) => handleStatusChange(player._id, e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                borderRadius: '8px',
-                                border: '1px solid #e2e8f0',
-                                fontSize: '0.9rem',
-                                backgroundColor: 'white',
-                                color: status === 'present' ? '#10b981' : status === 'absent' ? '#ef4444' : '#64748b',
-                                fontWeight: status ? '600' : '400',
-                                cursor: 'pointer',
-                              }}
+                              className={`attendance-status-select ${status === 'present' ? 'attendance-status-select--present' : status === 'absent' ? 'attendance-status-select--absent' : 'attendance-status-select--none'}`}
                             >
                               <option value="">-- Select status --</option>
                               <option value="present">✓ Present</option>
@@ -782,7 +625,6 @@ const AttendancePage = () => {
                               placeholder="Signature or initials"
                               value={attendance[player._id]?.signature || ''}
                               onChange={(event) => handleSignatureChange(player._id, event.target.value)}
-                              style={{ width: '100%' }}
                             />
                           </td>
                         </tr>
@@ -794,13 +636,12 @@ const AttendancePage = () => {
             )}
           </>
         )}
-        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+        <div className="form-actions">
           <button
-            className="btn btn--primary"
+            className="btn btn--primary save-attendance-btn"
             type="button"
             onClick={handleSave}
             disabled={loading || !players.length}
-            style={{ minWidth: '180px' }}
           >
             {loading ? 'Saving...' : '💾 Save attendance'}
           </button>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import StatCard from '../components/StatCard.jsx';
 import { useNotifications } from '../context/NotificationContext';
+import '../styles/pages/CoachDashboard.css';
 
 const CoachDashboard = () => {
   const navigate = useNavigate();
@@ -127,9 +128,9 @@ const CoachDashboard = () => {
         </div>
         {error && <p className="error-text">{error}</p>}
         {!groups.length && !loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <p className="text-muted" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No training groups yet</p>
-            <p className="text-muted" style={{ fontSize: '0.9rem' }}>Create your first group above to get started.</p>
+          <div className="empty-state">
+            <p className="text-muted empty-state-title">No training groups yet</p>
+            <p className="text-muted empty-state-subtitle">Create your first group above to get started.</p>
           </div>
         ) : (
           <div className="grid group-grid">
@@ -139,11 +140,11 @@ const CoachDashboard = () => {
                 <p className="text-muted" style={{ minHeight: '3rem', marginBottom: '1rem' }}>
                   {group.description || 'No description provided'}
                 </p>
-                <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'rgba(99, 102, 241, 0.05)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    Default Monthly Fee: <strong style={{ color: 'var(--text-primary)', fontSize: '1.1rem' }}>${(group.defaultMonthlyFee || 0).toFixed(2)}</strong>
+                <div className="group-info-box">
+                  <p className="group-info-text">
+                    Default Monthly Fee: <strong className="group-info-strong">${(group.defaultMonthlyFee || 0).toFixed(2)}</strong>
                   </p>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <p className="group-info-text" style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>
                     Players: <strong>{group.playerCount || 0}</strong>
                   </p>
                 </div>

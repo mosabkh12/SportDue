@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { useNotifications } from '../context/NotificationContext';
+import '../styles/pages/LoginPage.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();

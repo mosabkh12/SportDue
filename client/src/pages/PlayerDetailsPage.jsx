@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { handleApiError } from '../utils/errorHandler';
 import { useNotifications } from '../context/NotificationContext';
+import '../styles/pages/PlayerDetailsPage.css';
 
 const PlayerDetailsPage = () => {
   const { playerId } = useParams();
@@ -234,35 +235,11 @@ const PlayerDetailsPage = () => {
   return (
     <div className="page">
       <section className="page-header">
-        <div style={{ flex: 1 }}>
+        <div className="page-header-content">
           <button
             onClick={() => navigate(-1)}
-            className="btn btn--outline"
+            className="btn btn--outline btn-back"
             type="button"
-            style={{
-              marginBottom: '1rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'translateX(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
           >
             <span>←</span>
             <span>Back</span>
@@ -276,14 +253,13 @@ const PlayerDetailsPage = () => {
       </section>
 
       <section className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ color: 'white', margin: 0 }}>Player Information</h3>
+        <div className="card-header-row">
+          <h3 className="card-title">Player Information</h3>
           {!editingPlayer && (
             <button
-              className="btn btn--secondary"
+              className="btn btn--secondary btn-edit-details"
               type="button"
               onClick={handleStartEdit}
-              style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
             >
               ✏️ Edit Details
             </button>
@@ -291,9 +267,9 @@ const PlayerDetailsPage = () => {
         </div>
         
         {editingPlayer ? (
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+          <div className="edit-form-grid">
+            <div className="form-field">
+              <label className="form-label">
                 Full Name *
               </label>
               <input
@@ -302,20 +278,12 @@ const PlayerDetailsPage = () => {
                 value={playerEditForm.fullName}
                 onChange={handlePlayerEditChange}
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem'
-                }}
+                className="form-input"
                 placeholder="Enter full name"
               />
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+            <div className="form-field">
+              <label className="form-label">
                 Phone Number *
               </label>
               <input
@@ -325,24 +293,15 @@ const PlayerDetailsPage = () => {
                 onChange={handlePlayerEditChange}
                 required
                 maxLength={20}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontFamily: 'monospace'
-                }}
+                className="form-input form-input--monospace"
                 placeholder="e.g., 0526867838 or +972526867838"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Maximum 20 characters
               </small>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+            <div className="form-field">
+              <label className="form-label">
                 Username
               </label>
               <input
@@ -350,24 +309,15 @@ const PlayerDetailsPage = () => {
                 name="username"
                 value={playerEditForm.username}
                 onChange={handlePlayerEditChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontFamily: "'Monaco', 'Courier New', monospace"
-                }}
+                className="form-input form-input--monospace"
                 placeholder="Enter username (optional)"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Optional: Leave blank to auto-generate
               </small>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+            <div className="form-field">
+              <label className="form-label">
                 Password
               </label>
               <input
@@ -375,24 +325,15 @@ const PlayerDetailsPage = () => {
                 name="password"
                 value={playerEditForm.password}
                 onChange={handlePlayerEditChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontFamily: "'Monaco', 'Courier New', monospace"
-                }}
+                className="form-input form-input--monospace"
                 placeholder="Enter password (optional)"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Optional: Leave blank to keep current password
               </small>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+            <div className="form-field">
+              <label className="form-label">
                 Monthly Fee ($) *
               </label>
               <input
@@ -403,20 +344,12 @@ const PlayerDetailsPage = () => {
                 required
                 min="0"
                 step="0.01"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem'
-                }}
+                className="form-input"
                 placeholder="0.00"
               />
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>
+            <div className="form-field">
+              <label className="form-label">
                 Notes
               </label>
               <textarea
@@ -424,27 +357,17 @@ const PlayerDetailsPage = () => {
                 value={playerEditForm.notes}
                 onChange={handlePlayerEditChange}
                 rows={4}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  resize: 'vertical'
-                }}
+                className="form-textarea"
                 placeholder="Optional: Additional notes about this player"
               />
             </div>
-            {error && <p className="error-text" style={{ marginTop: '0.5rem' }}>{error}</p>}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            {error && <p className="error-text form-error">{error}</p>}
+            <div className="form-actions">
               <button
                 className="btn btn--outline"
                 type="button"
                 onClick={handleCancelPlayerEdit}
                 disabled={updatingPlayer}
-                style={{ minWidth: '100px' }}
               >
                 Cancel
               </button>
@@ -453,72 +376,45 @@ const PlayerDetailsPage = () => {
                 type="button"
                 onClick={handleSavePlayerEdit}
                 disabled={updatingPlayer || !playerEditForm.fullName.trim() || !playerEditForm.phone.trim()}
-                style={{ minWidth: '120px' }}
               >
                 {updatingPlayer ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Full Name:</label>
-              <p style={{ color: 'white', fontSize: '1rem' }}>{player?.fullName || '—'}</p>
+          <div className="detail-grid">
+            <div className="detail-item">
+              <label className="detail-label">Full Name:</label>
+              <p className="detail-value">{player?.fullName || '—'}</p>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Phone:</label>
-              <p style={{ color: 'white', fontSize: '1rem', fontFamily: 'monospace' }}>{player?.phone || '—'}</p>
+            <div className="detail-item">
+              <label className="detail-label">Phone:</label>
+              <p className="detail-value detail-value--monospace">{player?.phone || '—'}</p>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Username:</label>
+            <div className="detail-item">
+              <label className="detail-label">Username:</label>
               {player?.username ? (
-                <code style={{ 
-                  padding: '0.625rem 1rem', 
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '10px',
-                  fontSize: '1rem',
-                  fontFamily: "'Monaco', 'Courier New', monospace",
-                  display: 'inline-block',
-                  fontWeight: '600',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  letterSpacing: '0.05em'
-                }}>{player.username}</code>
+                <code className="credential-badge">{player.username}</code>
               ) : (
-                <span className="text-muted" style={{ fontSize: '0.9rem' }}>No username set</span>
+                <span className="text-muted">No username set</span>
               )}
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Password:</label>
+            <div className="detail-item">
+              <label className="detail-label">Password:</label>
               {player?.displayPassword ? (
-                <code style={{ 
-                  padding: '0.625rem 1rem', 
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 191, 36, 0.3))',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '10px',
-                  fontSize: '1rem',
-                  fontFamily: "'Monaco', 'Courier New', monospace",
-                  display: 'inline-block',
-                  fontWeight: '700',
-                  color: '#fff',
-                  border: '2px solid rgba(245, 158, 11, 0.5)',
-                  minWidth: '150px',
-                  letterSpacing: '0.05em',
-                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-                }}>{player.displayPassword}</code>
+                <code className="credential-badge credential-badge--password">{player.displayPassword}</code>
               ) : (
-                <span className="text-muted" style={{ fontSize: '0.9rem' }}>No password set</span>
+                <span className="text-muted">No password set</span>
               )}
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Monthly fee:</label>
-              <p style={{ color: 'white', fontSize: '1.25rem', fontWeight: '700' }}>${parseFloat(player?.monthlyFee || 0).toFixed(2)}</p>
+            <div className="detail-item">
+              <label className="detail-label">Monthly fee:</label>
+              <p className="detail-value detail-value--large">${parseFloat(player?.monthlyFee || 0).toFixed(2)}</p>
             </div>
             {player?.notes && (
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.875rem' }}>Notes:</label>
-                <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{player.notes}</p>
+              <div className="detail-item">
+                <label className="detail-label">Notes:</label>
+                <p className="detail-value notes-text">{player.notes}</p>
               </div>
             )}
           </div>
@@ -533,7 +429,7 @@ const PlayerDetailsPage = () => {
           </p>
         </div>
         <form onSubmit={handlePaymentSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="payment-form-grid">
             <label>
               Billing Period
               <input
@@ -542,9 +438,9 @@ const PlayerDetailsPage = () => {
                 value={paymentForm.month}
                 onChange={handlePaymentChange}
                 required
-                style={{ width: '100%' }}
+                className="form-input"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Select the billing date
               </small>
             </label>
@@ -559,9 +455,9 @@ const PlayerDetailsPage = () => {
                 step="0.01"
                 placeholder="0.00"
                 required
-                style={{ width: '100%' }}
+                className="form-input"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Enter amount received
               </small>
             </label>
@@ -575,25 +471,17 @@ const PlayerDetailsPage = () => {
                 min="0"
                 step="0.01"
                 placeholder="Optional"
-                style={{ width: '100%' }}
+                className="form-input"
               />
-              <small className="text-muted" style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
+              <small className="form-help-text">
                 Total amount due (optional)
               </small>
             </label>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+          <div className="payment-form-actions">
             <button 
-              className="btn btn--primary" 
+              className="btn btn--primary payment-form-submit-btn" 
               type="submit"
-              style={{ 
-                padding: '0.625rem 1.5rem',
-                fontSize: '0.95rem',
-                fontWeight: '600',
-                borderRadius: '8px',
-                transition: 'all 0.2s ease',
-                minWidth: '140px'
-              }}
             >
               Save Payment
             </button>
@@ -612,12 +500,12 @@ const PlayerDetailsPage = () => {
         </div>
         {error && <p className="error-text">{error}</p>}
         {!payments.length && !loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <p className="text-muted" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No payment records found</p>
-            <p className="text-muted" style={{ fontSize: '0.9rem' }}>Payment records will appear here once transactions are recorded.</p>
+          <div className="empty-state">
+            <p className="text-muted empty-state-title">No payment records found</p>
+            <p className="text-muted empty-state-subtitle">Payment records will appear here once transactions are recorded.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-wrapper">
             <table>
               <thead>
                 <tr>
@@ -631,9 +519,7 @@ const PlayerDetailsPage = () => {
               <tbody>
                 {payments.map((payment) => (
                   <tr key={payment._id}>
-                    <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                      {formatDateDisplay(payment.month)}
-                    </td>
+                    <td className="payment-date">{formatDateDisplay(payment.month)}</td>
                     {editingPayment === payment._id ? (
                       <>
                         <td>
@@ -643,7 +529,7 @@ const PlayerDetailsPage = () => {
                             onChange={(e) => setEditForm(prev => ({ ...prev, amountDue: e.target.value }))}
                             min="0"
                             step="0.01"
-                            style={{ width: '100px', padding: '0.5rem' }}
+                            className="payment-edit-input"
                           />
                         </td>
                         <td>
@@ -653,49 +539,27 @@ const PlayerDetailsPage = () => {
                             onChange={(e) => setEditForm(prev => ({ ...prev, amountPaid: e.target.value }))}
                             min="0"
                             step="0.01"
-                            style={{ width: '100px', padding: '0.5rem' }}
+                            className="payment-edit-input"
                           />
                         </td>
                         <td>
-                          <span style={{
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            background: payment.status === 'paid' 
-                              ? 'rgba(34, 197, 94, 0.15)' 
-                              : payment.status === 'partial'
-                              ? 'rgba(251, 191, 36, 0.15)'
-                              : 'rgba(239, 68, 68, 0.15)',
-                            color: payment.status === 'paid' 
-                              ? '#22c55e' 
-                              : payment.status === 'partial'
-                              ? '#fbbf24'
-                              : '#ef4444',
-                            border: `1px solid ${payment.status === 'paid' 
-                              ? 'rgba(34, 197, 94, 0.3)' 
-                              : payment.status === 'partial'
-                              ? 'rgba(251, 191, 36, 0.3)'
-                              : 'rgba(239, 68, 68, 0.3)'}`
-                          }}>
+                          <span className={`payment-status-badge payment-status-badge--${payment.status}`}>
                             {payment.status === 'paid' ? 'Paid' : payment.status === 'partial' ? 'Partial' : 'Unpaid'}
                           </span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div className="payment-actions">
                             <button
-                              className="btn btn--primary"
+                              className="btn btn--primary btn-small"
                               type="button"
                               onClick={() => handleSaveEdit(payment._id)}
-                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
                             >
                               Save
                             </button>
                             <button
-                              className="btn btn--outline"
+                              className="btn btn--outline btn-small"
                               type="button"
                               onClick={handleCancelEdit}
-                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
                             >
                               Cancel
                             </button>
@@ -704,54 +568,27 @@ const PlayerDetailsPage = () => {
                       </>
                     ) : (
                       <>
-                        <td style={{ fontWeight: '600' }}>${parseFloat(payment.amountDue || 0).toFixed(2)}</td>
-                        <td style={{ fontWeight: '600', color: '#22c55e' }}>${parseFloat(payment.amountPaid || 0).toFixed(2)}</td>
+                        <td className="payment-amount-due">${parseFloat(payment.amountDue || 0).toFixed(2)}</td>
+                        <td className="payment-amount-paid">${parseFloat(payment.amountPaid || 0).toFixed(2)}</td>
                         <td>
-                          <span style={{
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            background: payment.status === 'paid' 
-                              ? 'rgba(34, 197, 94, 0.15)' 
-                              : payment.status === 'partial'
-                              ? 'rgba(251, 191, 36, 0.15)'
-                              : 'rgba(239, 68, 68, 0.15)',
-                            color: payment.status === 'paid' 
-                              ? '#22c55e' 
-                              : payment.status === 'partial'
-                              ? '#fbbf24'
-                              : '#ef4444',
-                            border: `1px solid ${payment.status === 'paid' 
-                              ? 'rgba(34, 197, 94, 0.3)' 
-                              : payment.status === 'partial'
-                              ? 'rgba(251, 191, 36, 0.3)'
-                              : 'rgba(239, 68, 68, 0.3)'}`
-                          }}>
+                          <span className={`payment-status-badge payment-status-badge--${payment.status}`}>
                             {payment.status === 'paid' ? 'Paid' : payment.status === 'partial' ? 'Partial' : 'Unpaid'}
                           </span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div className="payment-actions">
                             <button
-                              className="btn btn--secondary"
+                              className="btn btn--secondary btn-small"
                               type="button"
                               onClick={() => handleEditPayment(payment)}
-                              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
                             >
                               Edit
                             </button>
                             <button
-                              className="btn btn--outline"
+                              className="btn btn--outline btn-small btn-delete"
                               type="button"
                               onClick={() => handleDeletePayment(payment._id)}
                               disabled={deletingPayment === payment._id}
-                              style={{ 
-                                fontSize: '0.85rem', 
-                                padding: '0.4rem 0.8rem',
-                                color: '#ef4444',
-                                borderColor: '#ef4444'
-                              }}
                             >
                               {deletingPayment === payment._id ? 'Deleting...' : 'Delete'}
                             </button>
@@ -774,14 +611,7 @@ const PlayerDetailsPage = () => {
           <p className="text-muted">No attendance records yet.</p>
         ) : (
           <>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1rem',
-                marginBottom: '1.5rem',
-              }}
-            >
+            <div className="attendance-stats-grid">
               <div className="card stat-card" style={{ borderTopColor: '#10b981', padding: '1rem' }}>
                 <p className="stat-card__label">Present days</p>
                 <p className="stat-card__value" style={{ color: '#10b981', fontSize: '1.5rem' }}>
@@ -812,7 +642,7 @@ const PlayerDetailsPage = () => {
                 </div>
               )}
             </div>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -833,27 +663,11 @@ const PlayerDetailsPage = () => {
                     return (
                       <tr
                         key={record._id}
-                        style={{
-                          backgroundColor: isPresent
-                            ? 'rgba(16, 185, 129, 0.05)'
-                            : 'rgba(239, 68, 68, 0.05)',
-                        }}
+                        className={`attendance-row attendance-row--${isPresent ? 'present' : 'absent'}`}
                       >
                         <td style={{ fontWeight: '600' }}>{formattedDate}</td>
                         <td>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              padding: '0.25rem 0.75rem',
-                              borderRadius: '12px',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              color: isPresent ? '#10b981' : '#ef4444',
-                              backgroundColor: isPresent
-                                ? 'rgba(16, 185, 129, 0.1)'
-                                : 'rgba(239, 68, 68, 0.1)',
-                            }}
-                          >
+                          <span className={`attendance-status-badge attendance-status-badge--${isPresent ? 'present' : 'absent'}`}>
                             {isPresent ? '✓ Present' : '✗ Absent'}
                           </span>
                         </td>

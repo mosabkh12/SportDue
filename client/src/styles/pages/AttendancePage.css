@@ -1,0 +1,298 @@
+/* AttendancePage styles */
+
+/* Back button */
+.btn-back {
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
+}
+
+/* Schedule configuration */
+.schedule-config-box {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: rgba(59, 130, 246, 0.08);
+  border-radius: 12px;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.schedule-config-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: rgba(17, 24, 39, 0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(55, 65, 81, 0.5);
+  margin-bottom: 1.5rem;
+}
+
+.day-checkbox-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.day-checkbox-label--unselected {
+  border: 2px solid rgba(107, 114, 128, 0.4);
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+.day-checkbox-label--selected {
+  border: 2px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.2);
+  font-weight: 700;
+  color: #60a5fa;
+}
+
+.day-checkbox-label--unselected:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.day-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+}
+
+.day-checkmark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.75rem;
+  color: #3b82f6;
+}
+
+.day-selected-indicator {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: rgba(34, 197, 94, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.day-selected-text {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Time inputs */
+.time-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.time-input-label {
+  display: block;
+}
+
+.time-input-label-text {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.time-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(55, 65, 81, 0.5);
+  background-color: rgba(17, 24, 39, 0.6);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.save-schedule-btn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+/* Date selection */
+.date-selection-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.date-input-wrapper {
+  flex: 1;
+  min-width: 200px;
+}
+
+.date-nav-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Training day indicators */
+.date-input--training-day {
+  border-color: #3b82f6;
+  border-width: 2px;
+}
+
+.date-input--not-training-day {
+  border-color: #ef4444;
+  border-width: 2px;
+}
+
+.date-indicator {
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.date-indicator--training {
+  color: #3b82f6;
+}
+
+.date-indicator--not-training {
+  color: #ef4444;
+}
+
+/* Success message */
+.success-message {
+  margin-top: 1rem;
+  color: #10b981;
+  font-weight: 600;
+  background-color: #d1fae5;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #10b981;
+}
+
+/* Stats grid */
+.attendance-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Player search and actions */
+.player-search-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.player-search-input {
+  flex: 1;
+  min-width: 250px;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Attendance table */
+.attendance-row {
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.attendance-row--present {
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.attendance-row--absent {
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.attendance-status-select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.attendance-status-select--present {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.attendance-status-select--absent {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.attendance-status-select--none {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.save-attendance-btn {
+  min-width: 180px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.attendance-stats-section {
+  margin-bottom: 1rem;
+}
+
+.table-cell-bold {
+  font-weight: 600;
+}
+
+.btn-small {
+  font-size: 0.85rem;
+}
+

@@ -1,0 +1,35 @@
+/* CoachDashboard styles */
+
+.group-info-box {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(99, 102, 241, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.group-info-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.group-info-strong {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-subtitle {
+  font-size: 0.9rem;
+}
+

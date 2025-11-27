@@ -1,0 +1,159 @@
+/* PlayerDashboard styles */
+
+/* Badge styles for group and sport type */
+.badge-container {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #93c5fd;
+}
+
+.sport-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.sport-badge--basketball {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.sport-badge--football {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+/* Contact information section */
+.contact-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.contact-label {
+  color: var(--text-primary);
+  margin-right: 0.5rem;
+  font-weight: 600;
+}
+
+.contact-inline-badge {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.contact-inline-badge--basketball {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.contact-inline-badge--football {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+/* Payment status badges */
+.payment-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.payment-status-badge--paid {
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.payment-status-badge--partial {
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.payment-status-badge--unpaid {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Attendance table styles */
+.attendance-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-row {
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.attendance-row--present {
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.attendance-row--absent {
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.attendance-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.attendance-status-badge--present {
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.attendance-status-badge--absent {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.notes-section {
+  margin-top: 0.5rem;
+}
+
+.notes-text {
+  margin-top: 0.25rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
