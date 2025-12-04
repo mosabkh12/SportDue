@@ -20,9 +20,17 @@ const sendPaymentReminderController = catchAsync(async (req, res, next) => {
     customMessage ||
     `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. Your payment for ${month || 'this month'} is due. Please pay soon. Thank you! -SportDue`;
 
-  await sendPaymentReminder(player.phone, message);
+  const smsEnabled = process.env.SMS_ENABLED === 'true';
+  const isTestMode = !smsEnabled;
+  
+  const result = await sendPaymentReminder(player.phone, message);
 
-  res.json({ success: true });
+  res.json({ 
+    success: true,
+    testMode: isTestMode,
+    method: result.method || 'unknown',
+    warning: isTestMode ? 'SMS is in TEST MODE. No actual SMS messages were sent. To enable real SMS, set SMS_ENABLED=true in your .env file and configure BulkGate credentials.' : undefined,
+  });
 });
 
 const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) => {
@@ -106,6 +114,10 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
   const dueDate = group.paymentDueDay || 1;
   const dueDateDisplay = `${dueDate}${dueDate === 1 ? 'st' : dueDate === 2 ? 'nd' : dueDate === 3 ? 'rd' : 'th'}`;
 
+  // Check if SMS is enabled
+  const smsEnabled = process.env.SMS_ENABLED === 'true';
+  const isTestMode = !smsEnabled;
+
   // Send reminders
   const results = await Promise.allSettled(
     playersWithPhones.map(async (player) => {
@@ -118,9 +130,15 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
         customMessage ||
         `Hi ${player.fullName.split(' ')[0]}, payment reminder from SportDue. ${monthDisplay} payment due ${dueDateDisplay}. Amount: $${amountDue}, Paid: $${amountPaid}, Remaining: $${remaining}. Please pay soon. Thank you! -SportDue`;
 
-      console.log(`📱 [REMINDER] Sending to ${player.fullName} (${player.phone})`);
-      await sendPaymentReminder(player.phone, message);
-      return { playerId: player._id, playerName: player.fullName, phone: player.phone };
+      console.log(`📱 [REMINDER] Sending to ${player.fullName} (${player.phone})${isTestMode ? ' [TEST MODE - SMS NOT ACTUALLY SENT]' : ''}`);
+      const result = await sendPaymentReminder(player.phone, message);
+      return { 
+        playerId: player._id, 
+        playerName: player.fullName, 
+        phone: player.phone,
+        method: result.method || 'unknown',
+        testMode: isTestMode,
+      };
     })
   );
 
@@ -136,7 +154,7 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
     }
   });
 
-  console.log(`✅ [REMINDERS COMPLETE] Sent: ${successful}, Failed: ${failed}, No Phone: ${playersWithoutPhones}`);
+  console.log(`✅ [REMINDERS COMPLETE] Sent: ${successful}, Failed: ${failed}, No Phone: ${playersWithoutPhones}${isTestMode ? ' [TEST MODE - SMS NOT ACTUALLY SENT]' : ''}`);
 
   res.json({
     success: true,
@@ -145,6 +163,8 @@ const sendGroupPaymentRemindersController = catchAsync(async (req, res, next) =>
     total: unpaidPlayers.length,
     playersWithoutPhones,
     month: monthDisplay,
+    testMode: isTestMode,
+    warning: isTestMode ? 'SMS is in TEST MODE. No actual SMS messages were sent. To enable real SMS, set SMS_ENABLED=true in your .env file and configure BulkGate credentials.' : undefined,
     details: results.map((r) =>
       r.status === 'fulfilled' ? { ...r.value, success: true } : { error: r.reason.message, success: false }
     ),

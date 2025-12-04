@@ -83,6 +83,7 @@ const sendPaymentReminder = async (phone, message) => {
     console.log(`📤 [BULKGATE] Attempting to send SMS to ${phoneNumber}`);
     console.log(`📤 [BULKGATE] Message length: ${message.length} characters`);
     console.log(`📤 [BULKGATE] Unicode: ${unicode === 1 ? 'Yes' : 'No'}`);
+    console.log(`📤 [BULKGATE] App ID: ${bulkgateAppId?.substring(0, 8)}...`);
 
     // Send SMS via BulkGate API
     const response = await axios.post(apiUrl, requestBody, {
@@ -101,11 +102,14 @@ const sendPaymentReminder = async (phone, message) => {
     const responseData = response.data;
     
     // Check for success indicators
+    // BulkGate returns "accepted" status when SMS is queued for delivery
     const isSuccess = 
       response.status === 200 &&
       (
         responseData?.status === 'success' || 
+        responseData?.status === 'accepted' ||
         responseData?.data?.status === 'success' ||
+        responseData?.data?.status === 'accepted' ||
         responseData?.response === 'success' ||
         responseData?.data?.response === 'success' ||
         (responseData?.data && !responseData?.data?.error && !responseData?.error) ||
@@ -127,13 +131,27 @@ const sendPaymentReminder = async (phone, message) => {
                        responseData?.id ||
                        responseData?.data?.message_id ||
                        'N/A';
-      console.log(`✅ [BULKGATE SMS SENT] To: ${phoneNumber} | Message ID: ${messageId}`);
+      // Check if in test/demo mode (price and credit are 0)
+      const isTestMode = responseData?.data?.price === 0 && responseData?.data?.credit === 0;
+      const statusMessage = responseData?.data?.status || 'unknown';
+      
+      if (isTestMode) {
+        console.log(`⚠️ [BULKGATE SMS ACCEPTED - TEST MODE] To: ${phoneNumber} | Message ID: ${messageId} | Status: ${statusMessage}`);
+        console.log(`⚠️ [BULKGATE] Price: ${responseData?.data?.price}, Credit: ${responseData?.data?.credit} - This may indicate test/demo mode`);
+      } else {
+        console.log(`✅ [BULKGATE SMS SENT] To: ${phoneNumber} | Message ID: ${messageId} | Status: ${statusMessage}`);
+      }
+      
       return {
         success: true,
         method: 'bulkgate',
         phone: phoneNumber,
         messageId: messageId,
-        message: 'SMS sent successfully via BulkGate',
+        message: isTestMode 
+          ? `SMS accepted by BulkGate (TEST MODE - may not deliver). Status: ${statusMessage}` 
+          : `SMS sent successfully via BulkGate. Status: ${statusMessage}`,
+        testMode: isTestMode,
+        status: statusMessage,
       };
     } else {
       const errorMessage = responseData?.data?.error?.message || 

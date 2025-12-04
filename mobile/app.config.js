@@ -1,0 +1,31 @@
+export default {
+  expo: {
+    name: "SportDue",
+    slug: "coachpay-mobile",
+    version: "1.0.0",
+    orientation: "portrait",
+    userInterfaceStyle: "dark",
+    splash: {
+      backgroundColor: "#000000",
+      resizeMode: "contain"
+    },
+    assetBundlePatterns: [
+      "**/*"
+    ],
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.sportdue.app"
+    },
+    android: {
+      adaptiveIcon: {
+        backgroundColor: "#000000"
+      },
+      package: "com.sportdue.app"
+    },
+    extra: {
+      apiUrl: process.env.API_URL || "http://localhost:5000/api"
+    }
+  }
+};
+
+
