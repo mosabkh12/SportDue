@@ -21,6 +21,14 @@ const groupSchema = new Schema(
       startTime: { type: String, default: '18:00' }, // Format: HH:MM
       endTime: { type: String, default: '19:30' }, // Format: HH:MM
     }, // Training session time
+    cancelledDates: {
+      type: [String],
+      default: [],
+    }, // Array of cancelled dates in YYYY-MM-DD format
+    addedDates: {
+      type: [String],
+      default: [],
+    }, // Array of added replacement dates in YYYY-MM-DD format
   },
   { timestamps: true }
 );

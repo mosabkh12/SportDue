@@ -53,7 +53,7 @@ const getGroupDetails = catchAsync(async (req, res) => {
 });
 
 const updateGroup = catchAsync(async (req, res, next) => {
-  const allowed = ['name', 'description', 'defaultMonthlyFee', 'paymentDueDay', 'trainingDays', 'trainingTime'];
+  const allowed = ['name', 'description', 'defaultMonthlyFee', 'paymentDueDay', 'trainingDays', 'trainingTime', 'cancelledDates', 'addedDates'];
   const updates = {};
 
   allowed.forEach((field) => {
