@@ -265,6 +265,118 @@ const AttendanceScreen = ({ route }) => {
 
   const setDateToday = () => setDate(today);
 
+  // Helper function to convert time string to minutes for comparison
+  const timeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
+  };
+
+  // Helper function to check if two time ranges overlap
+  const timeRangesOverlap = (start1, end1, start2, end2) => {
+    const start1Min = timeToMinutes(start1);
+    const end1Min = timeToMinutes(end1);
+    const start2Min = timeToMinutes(start2);
+    const end2Min = timeToMinutes(end2);
+    
+    // Check if ranges overlap
+    return (start1Min < end2Min && end1Min > start2Min);
+  };
+
+  // Check for time conflicts with other groups on specific dates
+  const checkTimeConflicts = async () => {
+    try {
+      // Fetch all groups to check for conflicts
+      const { data: allGroups } = await apiClient.get('/groups');
+      
+      const scheduleTime = trainingSchedule.trainingTime;
+      const conflicts = [];
+
+      // Get all dates that will have training (recurring + added, excluding cancelled)
+      const trainingDates = new Set();
+      
+      // Add recurring dates (next 2 years)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const twoYearsLater = new Date(today);
+      twoYearsLater.setFullYear(twoYearsLater.getFullYear() + 2);
+      
+      trainingSchedule.trainingDays.forEach((dayIndex) => {
+        const checkDate = new Date(today);
+        const daysUntilNext = (dayIndex - checkDate.getDay() + 7) % 7;
+        if (daysUntilNext > 0) {
+          checkDate.setDate(checkDate.getDate() + daysUntilNext);
+        }
+        
+        while (checkDate <= twoYearsLater) {
+          const dateKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+          if (!cancelledDates.has(dateKey)) {
+            trainingDates.add(dateKey);
+          }
+          checkDate.setDate(checkDate.getDate() + 7);
+        }
+      });
+
+      // Add manually added dates
+      addedDates.forEach((dateKey) => {
+        trainingDates.add(dateKey);
+      });
+
+      // Check each training date for conflicts
+      for (const dateKey of trainingDates) {
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const checkDate = new Date(year, month - 1, day);
+        
+        // Get time for this date
+        const timeForDate = dateTimes[dateKey] || scheduleTime;
+        const startTime = timeForDate.startTime || scheduleTime.startTime || '18:00';
+        const endTime = timeForDate.endTime || scheduleTime.endTime || '19:30';
+
+        // Check against all other groups
+        for (const otherGroup of allGroups) {
+          if (otherGroup._id === groupId) continue; // Skip current group
+          
+          if (!otherGroup.trainingDays || !Array.isArray(otherGroup.trainingDays)) continue;
+          
+          const dayOfWeek = checkDate.getDay();
+          const otherGroupHasDay = otherGroup.trainingDays.includes(dayOfWeek);
+          const otherGroupHasAdded = otherGroup.addedDates && 
+            Array.isArray(otherGroup.addedDates) && 
+            otherGroup.addedDates.includes(dateKey);
+          const otherGroupCancelled = otherGroup.cancelledDates && 
+            Array.isArray(otherGroup.cancelledDates) && 
+            otherGroup.cancelledDates.includes(dateKey);
+          
+          // Check if other group has training on this exact date
+          if ((otherGroupHasDay || otherGroupHasAdded) && !otherGroupCancelled) {
+            // Get other group's time for this date
+            const otherDateTimes = otherGroup.dateTimes || {};
+            const otherTimeForDate = otherDateTimes[dateKey] || otherGroup.trainingTime || { startTime: '18:00', endTime: '19:30' };
+            const otherStartTime = otherTimeForDate.startTime || '18:00';
+            const otherEndTime = otherTimeForDate.endTime || '19:30';
+
+            // Check if times overlap (same time slot)
+            if (timeRangesOverlap(startTime, endTime, otherStartTime, otherEndTime)) {
+              conflicts.push({
+                date: `${day}/${month}/${year}`,
+                dateKey,
+                otherGroupName: otherGroup.name,
+                time: `${startTime} - ${endTime}`,
+                otherTime: `${otherStartTime} - ${otherEndTime}`,
+              });
+              break; // One conflict per date is enough
+            }
+          }
+        }
+      }
+
+      return conflicts;
+    } catch (err) {
+      console.error('Error checking conflicts:', err);
+      return [];
+    }
+  };
+
   const handleUpdateTrainingSchedule = async () => {
     if (trainingSchedule.trainingDays.length === 0 && addedDates.size === 0) {
       notifications.error('Please select at least one training day or add a replacement date');
@@ -273,6 +385,23 @@ const AttendanceScreen = ({ route }) => {
 
     setUpdatingSchedule(true);
     try {
+      // Check for time conflicts before saving
+      const conflicts = await checkTimeConflicts();
+      
+      if (conflicts.length > 0) {
+        // Show conflict error
+        const conflictList = conflicts.map(c => 
+          `${c.date}: Conflict with "${c.otherGroupName}" (${c.time})`
+        ).join('\n');
+        
+        notifications.error(
+          `⚠️ Time conflict detected!\n\n${conflictList}\n\nCannot schedule training at the same time on the same date. Please adjust the schedule.`,
+          { duration: 8000 }
+        );
+        setUpdatingSchedule(false);
+        return;
+      }
+
       // Use the default time if no per-day times are set
       const scheduleTime = trainingSchedule.trainingTime;
       
@@ -519,19 +648,34 @@ const AttendanceScreen = ({ route }) => {
     const isRecurringDay = trainingSchedule.trainingDays.includes(dayOfWeek);
     const isSelected = isDateSelected(date);
     const isCancelled = isDateCancelled(date);
+    const isAdded = isDateAdded(date);
     
     // Check for double tap (within 300ms)
     const now = Date.now();
     const isDoubleTap = lastTap.date === dateKey && (now - lastTap.time) < 300;
     
-    if (isDoubleTap && isSelected && !isCancelled) {
-      // Double tap: Cancel this specific date
+    if (isDoubleTap && isAdded) {
+      // Double tap on added date: Remove it and clear its custom time
+      const newAdded = new Set(addedDates);
+      newAdded.delete(dateKey);
+      setAddedDates(newAdded);
+      // Remove custom time for this date
+      setDateTimes((prev) => {
+        const updated = { ...prev };
+        delete updated[dateKey];
+        return updated;
+      });
+      setSelectedDateForTime(null);
+      setSelectedDate(null);
+      setLastTap({ date: null, time: 0 });
+    } else if (isDoubleTap && isSelected && !isCancelled && !isAdded) {
+      // Double tap on recurring training day: Cancel this specific date
       const newCancelled = new Set(cancelledDates);
       newCancelled.add(dateKey);
       setCancelledDates(newCancelled);
       setSelectedDateForTime(null);
       setLastTap({ date: null, time: 0 });
-    } else if (isSelected && !isCancelled) {
+    } else if (isSelected && !isCancelled && !isAdded) {
       // Single tap on training day: Select for time editing
       setSelectedDateForTime(date);
       setSelectedDate(date);
@@ -550,13 +694,18 @@ const AttendanceScreen = ({ route }) => {
       setCancelledDates(newCancelled);
       setSelectedDateForTime(null);
       setLastTap({ date: null, time: 0 });
-    } else if (isDateAdded(date)) {
-      // Single tap on added date: Remove it
-      const newAdded = new Set(addedDates);
-      newAdded.delete(dateKey);
-      setAddedDates(newAdded);
-      setSelectedDateForTime(null);
-      setLastTap({ date: null, time: 0 });
+    } else if (isAdded) {
+      // Single tap on added date: Select for time editing
+      setSelectedDateForTime(date);
+      setSelectedDate(date);
+      // Initialize time for this date if not set
+      if (!dateTimes[dateKey]) {
+        setDateTimes((prev) => ({
+          ...prev,
+          [dateKey]: trainingSchedule.trainingTime,
+        }));
+      }
+      setLastTap({ date: dateKey, time: now });
     } else {
       // Single tap on non-training day: Add as replacement date
       const newAdded = new Set(addedDates);
@@ -631,7 +780,6 @@ const AttendanceScreen = ({ route }) => {
                 styles.dateInput,
                 isCurrentDateCancelled() && styles.dateInputCancelled,
                 !isCurrentDateCancelled() && isTrainingDay(date) && trainingDays.length > 0 && styles.dateInputTraining,
-                !isCurrentDateCancelled() && !isTrainingDay(date) && trainingDays.length > 0 && styles.dateInputNotTraining,
               ]}
               value={date}
               onChangeText={setDate}
@@ -644,45 +792,34 @@ const AttendanceScreen = ({ route }) => {
               <Text style={styles.dateSuccess}>+ Replacement date (added)</Text>
             )}
             {!isCurrentDateCancelled() && !isCurrentDateAdded() && !isTrainingDay(date) && trainingDays.length > 0 && (
-              <Text style={styles.dateWarning}>⚠️ Not a scheduled training day</Text>
+              <Text style={styles.dateInfo}>ℹ️ Not a scheduled training day (attendance can still be marked)</Text>
             )}
             {!isCurrentDateCancelled() && !isCurrentDateAdded() && isTrainingDay(date) && trainingDays.length > 0 && (
               <Text style={styles.dateSuccess}>✓ Scheduled training day</Text>
             )}
+            {trainingDays.length === 0 && (
+              <Text style={styles.dateInfo}>ℹ️ You can mark attendance on any day</Text>
+            )}
           </View>
           <Text style={styles.dateDisplay}>{formatDate(date)}</Text>
           <View style={styles.dateNavButtons}>
-            {trainingDays.length > 0 ? (
-              <>
-                <TouchableOpacity
-                  style={styles.navButton}
-                  onPress={() => navigateToTrainingDay('prev')}
-                >
-                  <Text style={styles.navButtonText}>← Previous</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navButton} onPress={setDateToday}>
-                  <Text style={styles.navButtonText}>Today</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.navButton}
-                  onPress={() => navigateToTrainingDay('next')}
-                >
-                  <Text style={styles.navButtonText}>Next →</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity style={styles.navButton} onPress={() => navigateDate(-1)}>
-                  <Text style={styles.navButtonText}>←</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navButton} onPress={setDateToday}>
-                  <Text style={styles.navButtonText}>Today</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navButton} onPress={() => navigateDate(1)}>
-                  <Text style={styles.navButtonText}>→</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <>
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigateDate(-1)}
+              >
+                <Text style={styles.navButtonText}>← Previous</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navButton} onPress={setDateToday}>
+                <Text style={styles.navButtonText}>Today</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigateDate(1)}
+              >
+                <Text style={styles.navButtonText}>Next →</Text>
+              </TouchableOpacity>
+            </>
           </View>
         </View>
 

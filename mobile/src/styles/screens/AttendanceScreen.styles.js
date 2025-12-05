@@ -126,6 +126,11 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: spacing.xs,
   },
+  dateInfo: {
+    color: colors.accent,
+    fontSize: 12,
+    marginTop: spacing.xs,
+  },
   dateNavButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
