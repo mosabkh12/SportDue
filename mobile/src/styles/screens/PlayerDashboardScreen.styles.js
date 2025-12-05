@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { colors, spacing, typography, shadows } from '../theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -206,6 +206,216 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     padding: 20,
+  },
+  selectedDaysPreview: {
+    backgroundColor: colors.success + '20',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  selectedDaysPreviewText: {
+    color: colors.success,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  monthNavButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bgTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  monthNavButtonText: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  monthYearContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  monthYearText: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  calendarContainer: {
+    marginBottom: spacing.lg,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  calendarHeaderCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  calendarHeaderText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  calendarCell: {
+    width: '13.5%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  calendarDayButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  calendarDayButtonOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarDayButtonSelected: {
+    backgroundColor: '#1a73e8',
+  },
+  calendarDayButtonCancelled: {
+    backgroundColor: colors.error,
+    opacity: 0.7,
+  },
+  calendarDayButtonAdded: {
+    backgroundColor: colors.success,
+  },
+  calendarDayButtonSelectedDate: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  calendarDayText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  calendarDayTextOtherMonth: {
+    color: colors.textMuted,
+    opacity: 0.5,
+  },
+  calendarDayTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  calendarDayTextCancelled: {
+    color: '#fff',
+    textDecorationLine: 'line-through',
+  },
+  calendarDayTextAdded: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  cancelledIndicator: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelledIndicatorText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  addedIndicator: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addedIndicatorText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  selectedDateTimeContainer: {
+    backgroundColor: colors.bgTertiary,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedDateTitle: {
+    ...typography.h3,
+    fontSize: 16,
+    marginBottom: spacing.md,
+    color: colors.primary,
+  },
+  defaultTimeContainer: {
+    backgroundColor: colors.bgTertiary,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  defaultTimeTitle: {
+    ...typography.h3,
+    fontSize: 16,
+    marginBottom: spacing.xs,
+  },
+  defaultTimeSubtitle: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+  },
+  timeDisplayContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  timeSlot: {
+    flex: 1,
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  timeSlotLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+    fontSize: 12,
+  },
+  timeSlotValue: {
+    ...typography.h3,
+    fontSize: 18,
+    color: colors.primary,
+    fontWeight: '700',
   },
 });
 

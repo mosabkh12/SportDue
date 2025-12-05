@@ -422,6 +422,11 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
   },
+  calendarDayButtonTimeSelected: {
+    borderWidth: 3,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
   calendarDayTextCancelled: {
     color: '#fff',
     textDecorationLine: 'line-through',

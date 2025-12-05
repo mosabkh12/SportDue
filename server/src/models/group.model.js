@@ -29,6 +29,10 @@ const groupSchema = new Schema(
       type: [String],
       default: [],
     }, // Array of added replacement dates in YYYY-MM-DD format
+    dateTimes: {
+      type: Schema.Types.Mixed,
+      default: {},
+    }, // Custom times for specific dates (e.g., { "2025-12-15": { startTime: "17:00", endTime: "18:30" } })
   },
   { timestamps: true }
 );

@@ -48,6 +48,9 @@ const AttendanceScreen = ({ route }) => {
   const [cancelledDates, setCancelledDates] = useState(new Set()); // Track cancelled specific dates
   const [addedDates, setAddedDates] = useState(new Set()); // Track added replacement dates
   const [selectedDate, setSelectedDate] = useState(null); // Currently selected date for actions
+  const [selectedDateForTime, setSelectedDateForTime] = useState(null); // Specific date selected for time editing
+  const [dateTimes, setDateTimes] = useState({}); // Store custom times for specific dates (YYYY-MM-DD format)
+  const [lastTap, setLastTap] = useState({ date: null, time: 0 }); // Track double tap
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [updatingSchedule, setUpdatingSchedule] = useState(false);
@@ -83,6 +86,12 @@ const AttendanceScreen = ({ route }) => {
         setAddedDates(new Set(data.group.addedDates));
       } else {
         setAddedDates(new Set());
+      }
+      // Load per-date times from backend if they exist
+      if (data.group?.dateTimes && typeof data.group.dateTimes === 'object') {
+        setDateTimes(data.group.dateTimes);
+      } else {
+        setDateTimes({});
       }
     } catch (err) {
       notifications.error(err.message || 'Failed to load group');
@@ -271,6 +280,7 @@ const AttendanceScreen = ({ route }) => {
         trainingTime: scheduleTime,
         cancelledDates: Array.from(cancelledDates),
         addedDates: Array.from(addedDates),
+        dateTimes: Object.keys(dateTimes).length > 0 ? dateTimes : undefined,
       });
       const dayNames = trainingSchedule.trainingDays.map(
         (d) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
@@ -289,6 +299,7 @@ const AttendanceScreen = ({ route }) => {
       setModifiedDays(new Set());
       setSelectedDayForTime(null);
       setSelectedDate(null);
+      setSelectedDateForTime(null);
       setShowScheduleConfig(false);
     } catch (err) {
       notifications.error(err.response?.data?.message || err.message || 'Failed to update training schedule');
@@ -326,17 +337,16 @@ const AttendanceScreen = ({ route }) => {
     const newModifiedDays = new Set(modifiedDays);
     newModifiedDays.add(dayIndex);
     setModifiedDays(newModifiedDays);
-    
-    // Update default time if this is the first day
-    if (trainingSchedule.trainingDays.length === 1 && trainingSchedule.trainingDays[0] === dayIndex) {
-      setTrainingSchedule((prev) => ({
-        ...prev,
-        trainingTime: {
-          ...prev.trainingTime,
-          [field]: value,
-        },
-      }));
-    }
+  };
+
+  const handleDateTimeChange = (dateKey, field, value) => {
+    setDateTimes((prev) => ({
+      ...prev,
+      [dateKey]: {
+        ...prev[dateKey] || trainingSchedule.trainingTime,
+        [field]: value,
+      },
+    }));
   };
 
   const onRefresh = async () => {
@@ -464,36 +474,61 @@ const AttendanceScreen = ({ route }) => {
     const dateKey = getDateKey(date);
     const dayOfWeek = date.getDay();
     const isRecurringDay = trainingSchedule.trainingDays.includes(dayOfWeek);
+    const isSelected = isDateSelected(date);
+    const isCancelled = isDateCancelled(date);
     
-    if (isDateSelected(date)) {
-      // If it's a training day, cancel this specific date
-      if (isRecurringDay && !isDateCancelled(date)) {
-        const newCancelled = new Set(cancelledDates);
-        newCancelled.add(dateKey);
-        setCancelledDates(newCancelled);
-        setSelectedDate(date);
-      } else if (isDateAdded(date)) {
-        // Remove added date
-        const newAdded = new Set(addedDates);
-        newAdded.delete(dateKey);
-        setAddedDates(newAdded);
-        setSelectedDate(null);
+    // Check for double tap (within 300ms)
+    const now = Date.now();
+    const isDoubleTap = lastTap.date === dateKey && (now - lastTap.time) < 300;
+    
+    if (isDoubleTap && isSelected && !isCancelled) {
+      // Double tap: Cancel this specific date
+      const newCancelled = new Set(cancelledDates);
+      newCancelled.add(dateKey);
+      setCancelledDates(newCancelled);
+      setSelectedDateForTime(null);
+      setLastTap({ date: null, time: 0 });
+    } else if (isSelected && !isCancelled) {
+      // Single tap on training day: Select for time editing
+      setSelectedDateForTime(date);
+      setSelectedDate(date);
+      // Initialize time for this date if not set
+      if (!dateTimes[dateKey]) {
+        setDateTimes((prev) => ({
+          ...prev,
+          [dateKey]: trainingSchedule.trainingTime,
+        }));
       }
+      setLastTap({ date: dateKey, time: now });
+    } else if (isCancelled) {
+      // Single tap on cancelled date: Restore it
+      const newCancelled = new Set(cancelledDates);
+      newCancelled.delete(dateKey);
+      setCancelledDates(newCancelled);
+      setSelectedDateForTime(null);
+      setLastTap({ date: null, time: 0 });
+    } else if (isDateAdded(date)) {
+      // Single tap on added date: Remove it
+      const newAdded = new Set(addedDates);
+      newAdded.delete(dateKey);
+      setAddedDates(newAdded);
+      setSelectedDateForTime(null);
+      setLastTap({ date: null, time: 0 });
     } else {
-      // If clicking on a non-training day
-      if (isDateCancelled(date)) {
-        // Remove from cancelled (restore it)
-        const newCancelled = new Set(cancelledDates);
-        newCancelled.delete(dateKey);
-        setCancelledDates(newCancelled);
-        setSelectedDate(null);
-      } else {
-        // Add as replacement date
-        const newAdded = new Set(addedDates);
-        newAdded.add(dateKey);
-        setAddedDates(newAdded);
-        setSelectedDate(date);
+      // Single tap on non-training day: Add as replacement date
+      const newAdded = new Set(addedDates);
+      newAdded.add(dateKey);
+      setAddedDates(newAdded);
+      setSelectedDateForTime(date);
+      // Initialize time for this date if not set
+      if (!dateTimes[dateKey]) {
+        setDateTimes((prev) => ({
+          ...prev,
+          [dateKey]: trainingSchedule.trainingTime,
+        }));
       }
+      setSelectedDate(date);
+      setLastTap({ date: dateKey, time: now });
     }
   };
 
@@ -878,6 +913,7 @@ const AttendanceScreen = ({ route }) => {
                     const dateKey = getDateKey(date);
                     const isTimeSelected = selectedDayForTime === dayOfWeek && isSelected;
                     const isThisDateSelected = selectedDate && getDateKey(selectedDate) === dateKey;
+                    const isThisDateForTime = selectedDateForTime && getDateKey(selectedDateForTime) === dateKey;
                     
                     return (
                       <View key={index} style={styles.calendarCell}>
@@ -890,6 +926,7 @@ const AttendanceScreen = ({ route }) => {
                             isAdded && isCurrentMonth && styles.calendarDayButtonAdded,
                             isTimeSelected && styles.calendarDayButtonActive,
                             isThisDateSelected && styles.calendarDayButtonSelectedDate,
+                            isThisDateForTime && styles.calendarDayButtonTimeSelected,
                           ]}
                           onPress={() => {
                             if (isCurrentMonth) {
@@ -930,8 +967,57 @@ const AttendanceScreen = ({ route }) => {
                 </View>
               </View>
 
-              {/* Time Inputs for Selected Day */}
-              {selectedDayForTime !== null && trainingSchedule.trainingDays.includes(selectedDayForTime) && (
+              {/* Time Inputs for Selected Specific Date */}
+              {selectedDateForTime && (
+                <View style={styles.dayTimeContainer}>
+                  <View style={styles.dayTimeHeader}>
+                    <Text style={styles.dayTimeTitle}>
+                      Time for {monthNames[selectedDateForTime.getMonth()]} {selectedDateForTime.getDate()}, {selectedDateForTime.getFullYear()}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.removeDayButton}
+                      onPress={() => {
+                        const dateKey = getDateKey(selectedDateForTime);
+                        setDateTimes((prev) => {
+                          const updated = { ...prev };
+                          delete updated[dateKey];
+                          return updated;
+                        });
+                        setSelectedDateForTime(null);
+                      }}
+                    >
+                      <Text style={styles.removeDayButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.timeContainer}>
+                    <View style={styles.timeInputGroup}>
+                      <Text style={styles.timeLabel}>Start Time</Text>
+                      <TextInput
+                        style={styles.timeInput}
+                        value={dateTimes[getDateKey(selectedDateForTime)]?.startTime || trainingSchedule.trainingTime.startTime}
+                        onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'startTime', value)}
+                        placeholder="18:00"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.timeInputGroup}>
+                      <Text style={styles.timeLabel}>End Time</Text>
+                      <TextInput
+                        style={styles.timeInput}
+                        value={dateTimes[getDateKey(selectedDateForTime)]?.endTime || trainingSchedule.trainingTime.endTime}
+                        onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'endTime', value)}
+                        placeholder="19:30"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Time Inputs for Selected Day of Week (fallback) */}
+              {selectedDayForTime !== null && trainingSchedule.trainingDays.includes(selectedDayForTime) && !selectedDateForTime && (
                 <View style={styles.dayTimeContainer}>
                   <View style={styles.dayTimeHeader}>
                     <Text style={styles.dayTimeTitle}>

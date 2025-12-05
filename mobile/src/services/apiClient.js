@@ -23,13 +23,17 @@ const initializeBaseURL = async () => {
     // Start monitoring network changes
     startNetworkMonitoring();
     
-    // Subscribe to IP changes and update base URL (silently)
+    // Subscribe to IP changes and update base URL
     subscribeToNetworkChanges((newIP) => {
       if (newIP && newIP !== currentServerIP) {
+        console.log(`\n🔄 [API Client] Updating API base URL`);
+        console.log(`   Old IP: ${currentServerIP || 'none'}`);
+        console.log(`   New IP: ${newIP}:${PORT}`);
         currentServerIP = newIP;
         const newBaseURL = `http://${newIP}:${PORT}/api`;
         baseURL = newBaseURL;
         apiClient.defaults.baseURL = newBaseURL;
+        console.log(`✅ [API Client] Base URL updated: ${newBaseURL}\n`);
       }
     });
   } catch (error) {
@@ -96,22 +100,32 @@ apiClient.interceptors.response.use(
     }
 
     // Handle network errors - try to reconnect with new IP (only once per request)
-    if ((error.code === 'ECONNREFUSED' || error.message.includes('Network request failed') || error.code === 'ERR_NETWORK') && !error.config._retry) {
+    if ((error.code === 'ECONNREFUSED' || error.message.includes('Network request failed') || error.code === 'ERR_NETWORK' || error.code === 'ETIMEDOUT') && !error.config._retry) {
       try {
+        // First, try to get the latest IP from network detector (might have changed)
         const { getServerIP } = require('../utils/networkDetector');
-        const newIP = await getServerIP(true); // Silent mode
+        console.log(`\n⚠️ [API Client] Network error detected, detecting new IP...`);
+        const newIP = await getServerIP(false, true); // Show logs, force refresh
+        
         if (newIP && newIP !== currentServerIP) {
+          console.log(`🔄 [API Client] Updating IP due to network error: ${currentServerIP} -> ${newIP}`);
           currentServerIP = newIP;
           const newBaseURL = `http://${newIP}:${PORT}/api`;
           baseURL = newBaseURL;
           apiClient.defaults.baseURL = newBaseURL;
-          // Mark request to prevent infinite retry loop
-          error.config._retry = true;
-          // Retry the original request with new URL
-          return apiClient.request(error.config);
+          console.log(`✅ [API Client] Retrying request with new IP: ${newBaseURL}\n`);
         }
+        
+        // Mark request to prevent infinite retry loop
+        error.config._retry = true;
+        // Update the URL in the config to use new base URL
+        if (error.config.url) {
+          error.config.url = error.config.url.replace(/^https?:\/\/[^\/]+/, '');
+        }
+        // Retry the original request with new URL
+        return apiClient.request(error.config);
       } catch (reconnectError) {
-        // Silent error
+        // Silent error - network might be down
       }
     }
 

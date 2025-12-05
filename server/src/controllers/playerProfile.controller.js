@@ -11,7 +11,7 @@ const { USER_ROLES } = require('../config/constants');
 const getMyProfile = catchAsync(async (req, res, next) => {
   const player = await Player.findById(req.user.id).populate({
     path: 'groupId',
-    select: 'name description coachId',
+    select: 'name description coachId trainingDays trainingTime cancelledDates addedDates dateTimes',
     populate: {
       path: 'coachId',
       select: 'sportType'
@@ -30,7 +30,12 @@ const getMyProfile = catchAsync(async (req, res, next) => {
       id: player.groupId._id,
       name: player.groupId.name,
       description: player.groupId.description,
-      sportType: player.groupId.coachId?.sportType || null
+      sportType: player.groupId.coachId?.sportType || null,
+      trainingDays: player.groupId.trainingDays || [],
+      trainingTime: player.groupId.trainingTime || null,
+      cancelledDates: player.groupId.cancelledDates || [],
+      addedDates: player.groupId.addedDates || [],
+      dateTimes: player.groupId.dateTimes && typeof player.groupId.dateTimes === 'object' ? player.groupId.dateTimes : {}
     };
   }
   

@@ -101,8 +101,14 @@ const GroupDetailsScreen = ({ route }) => {
       });
       notifications.success('Player added successfully');
       setPlayerForm({ fullName: '', phone: '', monthlyFee: group?.defaultMonthlyFee ? String(group.defaultMonthlyFee) : '', notes: '' });
-      setShowAddPlayer(false);
-      fetchGroupDetails();
+      Animated.timing(addPlayerSlideAnim, {
+        toValue: 1000,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowAddPlayer(false);
+        fetchGroupDetails();
+      });
     } catch (err) {
       notifications.error(err.message || 'Failed to add player');
     } finally {

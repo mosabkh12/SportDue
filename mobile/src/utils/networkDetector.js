@@ -62,7 +62,7 @@ const getNetworkBase = (deviceIP) => {
 };
 
 // Test if an IP can reach the backend server
-const testIPConnection = async (ip, silent = false, timeout = 800) => {
+const testIPConnection = async (ip, silent = false, timeout = 300) => {
   try {
     const url = `http://${ip}:${DEFAULT_PORT}/health`;
     const controller = new AbortController();
@@ -78,8 +78,8 @@ const testIPConnection = async (ip, silent = false, timeout = 800) => {
     
     clearTimeout(timeoutId);
     if (response.ok) {
-      if (!silent && !hasLoggedConnection) {
-        console.log(`✅ Connected to server at ${ip}:${DEFAULT_PORT}`);
+      if (!silent) {
+        console.log(`✅ [IP Detection] Connected to server at ${ip}:${DEFAULT_PORT}`);
         hasLoggedConnection = true;
       }
       return true;
@@ -160,68 +160,87 @@ const getIPsToTest = async () => {
 };
 
 // Detect server IP - optimized for speed
-const detectServerIP = async () => {
+const detectServerIP = async (showLogs = false) => {
   try {
     const networkState = await NetInfo.fetch();
     
     if (!networkState.isConnected) {
+      if (showLogs) console.log(`⚠️ [IP Detection] Network not connected`);
       return null;
     }
     
-    const ipsToTest = await getIPsToTest();
+    if (showLogs) console.log(`🔍 [IP Detection] Starting fast IP detection...`);
+    const startTime = Date.now();
     
-    // Test first 5 IPs immediately (most likely ones) with fast timeout
-    const priorityIPs = ipsToTest.slice(0, 5);
+    const ipsToTest = await getIPsToTest();
+    if (showLogs) console.log(`📡 [IP Detection] Testing ${ipsToTest.length} IPs (priority: ${Math.min(10, ipsToTest.length)})`);
+    
+    // Test first 10 IPs in parallel (most likely ones) with very fast timeout
+    const priorityIPs = ipsToTest.slice(0, 10);
     const priorityResults = await Promise.allSettled(
-      priorityIPs.map(ip => testIPConnection(ip, true, 500).then(works => ({ ip, works })))
+      priorityIPs.map(ip => testIPConnection(ip, !showLogs, 250).then(works => ({ ip, works })))
     );
     
     for (const result of priorityResults) {
       if (result.status === 'fulfilled' && result.value.works) {
-        return result.value.ip;
+        const detectedIP = result.value.ip;
+        const elapsed = Date.now() - startTime;
+        console.log(`✅ [IP Detection] Server IP detected: ${detectedIP}:${DEFAULT_PORT} (${elapsed}ms)`);
+        return detectedIP;
       }
     }
     
-    // If priority IPs didn't work, test next batch with slightly longer timeout
-    const nextBatch = ipsToTest.slice(5, 15);
+    // If priority IPs didn't work, test next batch in parallel
+    const nextBatch = ipsToTest.slice(10, 20);
     if (nextBatch.length > 0) {
+      if (showLogs) console.log(`🔍 [IP Detection] Testing next batch (${nextBatch.length} IPs)...`);
       const nextResults = await Promise.allSettled(
-        nextBatch.map(ip => testIPConnection(ip, true, 800).then(works => ({ ip, works })))
+        nextBatch.map(ip => testIPConnection(ip, !showLogs, 300).then(works => ({ ip, works })))
       );
       
       for (const result of nextResults) {
         if (result.status === 'fulfilled' && result.value.works) {
-          return result.value.ip;
+          const detectedIP = result.value.ip;
+          const elapsed = Date.now() - startTime;
+          console.log(`✅ [IP Detection] Server IP detected: ${detectedIP}:${DEFAULT_PORT} (${elapsed}ms)`);
+          return detectedIP;
         }
       }
     }
     
-    // Last resort: test remaining IPs in smaller batches
-    const remainingIPs = ipsToTest.slice(15);
+    // Last resort: test remaining IPs in parallel batches
+    const remainingIPs = ipsToTest.slice(20);
     if (remainingIPs.length > 0) {
-      const batchSize = 5;
+      if (showLogs) console.log(`🔍 [IP Detection] Testing remaining IPs (${remainingIPs.length})...`);
+      const batchSize = 10;
       for (let i = 0; i < remainingIPs.length; i += batchSize) {
         const batch = remainingIPs.slice(i, i + batchSize);
         const results = await Promise.allSettled(
-          batch.map(ip => testIPConnection(ip, true, 1000).then(works => ({ ip, works })))
+          batch.map(ip => testIPConnection(ip, !showLogs, 400).then(works => ({ ip, works })))
         );
         
         for (const result of results) {
           if (result.status === 'fulfilled' && result.value.works) {
-            return result.value.ip;
+            const detectedIP = result.value.ip;
+            const elapsed = Date.now() - startTime;
+            console.log(`✅ [IP Detection] Server IP detected: ${detectedIP}:${DEFAULT_PORT} (${elapsed}ms)`);
+            return detectedIP;
           }
         }
       }
     }
     
+    const elapsed = Date.now() - startTime;
+    if (showLogs) console.log(`❌ [IP Detection] No server found after ${elapsed}ms`);
     return null;
   } catch (error) {
+    if (showLogs) console.log(`❌ [IP Detection] Error: ${error.message}`);
     return null;
   }
 };
 
 // Get server IP (with caching per network)
-export const getServerIP = async (silent = false) => {
+export const getServerIP = async (silent = false, forceRefresh = false) => {
   try {
     const networkId = await getNetworkId();
     const networkChanged = networkId !== currentNetworkId;
@@ -229,7 +248,9 @@ export const getServerIP = async (silent = false) => {
     
     // If network changed, clear stored IP for this network
     if (networkChanged && currentIP) {
+      console.log(`🔄 [IP Detection] Network changed detected! Old network: ${currentNetworkId || 'unknown'}, New network: ${networkId}`);
       hasLoggedConnection = false;
+      const oldIP = currentIP;
       currentIP = null;
       // Clear stored IPs for old network
       const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
@@ -238,67 +259,75 @@ export const getServerIP = async (silent = false) => {
         delete networkIPs[networkId];
         await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
       }
+      console.log(`🔄 [IP Detection] Cleared old IP: ${oldIP}`);
     }
     
-    // Try to get IP stored for this specific network
-    const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
-    const networkIPs = networkIPsJson ? JSON.parse(networkIPsJson) : {};
-    
-    if (networkIPs[networkId]) {
-      const storedIP = networkIPs[networkId];
-      const isWorking = await testIPConnection(storedIP, silent);
-      if (isWorking) {
-        if (currentIP !== storedIP) {
-          currentIP = storedIP;
-          if (!silent) {
-            console.log(`✅ Connected to server: ${storedIP}:${DEFAULT_PORT}`);
+    // If force refresh, skip cache
+    if (!forceRefresh) {
+      // Try to get IP stored for this specific network
+      const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
+      const networkIPs = networkIPsJson ? JSON.parse(networkIPsJson) : {};
+      
+      if (networkIPs[networkId]) {
+        const storedIP = networkIPs[networkId];
+        const isWorking = await testIPConnection(storedIP, silent, 200);
+        if (isWorking) {
+          if (currentIP !== storedIP) {
+            console.log(`✅ [IP Detection] Using cached IP for network: ${storedIP}:${DEFAULT_PORT}`);
+            currentIP = storedIP;
           }
+          return storedIP;
+        } else {
+          console.log(`⚠️ [IP Detection] Cached IP ${storedIP} is not working, detecting new IP...`);
         }
-        return storedIP;
       }
-    }
-    
-    // Also try general stored IP
-    const generalStoredIP = await AsyncStorage.getItem(STORAGE_KEY);
-    if (generalStoredIP && generalStoredIP !== networkIPs[networkId]) {
-      const isWorking = await testIPConnection(generalStoredIP, silent);
-      if (isWorking) {
-        // Save it for this network
-        networkIPs[networkId] = generalStoredIP;
-        await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
-        if (currentIP !== generalStoredIP) {
-          currentIP = generalStoredIP;
-          if (!silent) {
-            console.log(`✅ Connected to server: ${generalStoredIP}:${DEFAULT_PORT}`);
+      
+      // Also try general stored IP
+      const generalStoredIP = await AsyncStorage.getItem(STORAGE_KEY);
+      if (generalStoredIP && generalStoredIP !== networkIPs[networkId]) {
+        const isWorking = await testIPConnection(generalStoredIP, silent, 200);
+        if (isWorking) {
+          // Save it for this network
+          networkIPs[networkId] = generalStoredIP;
+          await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
+          if (currentIP !== generalStoredIP) {
+            console.log(`✅ [IP Detection] Using general cached IP: ${generalStoredIP}:${DEFAULT_PORT}`);
+            currentIP = generalStoredIP;
           }
+          return generalStoredIP;
         }
-        return generalStoredIP;
       }
     }
     
     // Detect new IP for this network
-    const newIP = await detectServerIP();
+    console.log(`🔍 [IP Detection] Detecting new server IP for network: ${networkId}...`);
+    const newIP = await detectServerIP(!silent);
     
     if (newIP) {
       // Store for this specific network
+      const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
+      const networkIPs = networkIPsJson ? JSON.parse(networkIPsJson) : {};
       networkIPs[networkId] = newIP;
       await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
       // Also store as general fallback
       await AsyncStorage.setItem(STORAGE_KEY, newIP);
       
       if (currentIP !== newIP) {
+        const oldIP = currentIP;
         currentIP = newIP;
+        console.log(`🎉 [IP Detection] NEW IP DETECTED: ${oldIP || 'none'} -> ${newIP}:${DEFAULT_PORT}`);
         notifyListeners(newIP);
-        if (!silent) {
-          console.log(`✅ Connected to server: ${newIP}:${DEFAULT_PORT}`);
-        }
+      } else {
+        console.log(`✅ [IP Detection] IP confirmed: ${newIP}:${DEFAULT_PORT}`);
       }
       return newIP;
     }
     
     // Fallback
+    console.log(`⚠️ [IP Detection] No server found, using localhost fallback`);
     return 'localhost';
   } catch (error) {
+    console.log(`❌ [IP Detection] Error getting server IP: ${error.message}`);
     return 'localhost';
   }
 };
@@ -327,21 +356,32 @@ export const getCurrentIP = () => currentIP;
 
 // Start network monitoring
 export const startNetworkMonitoring = async () => {
+  console.log(`🚀 [IP Detection] Starting network monitoring...`);
   await getServerIP();
   
   if (Platform.OS !== 'web') {
     let lastNetworkId = null;
+    let isDetecting = false;
     
     NetInfo.addEventListener(async (networkState) => {
       if (networkState.isConnected && networkState.isInternetReachable) {
+        // Prevent multiple simultaneous detections
+        if (isDetecting) return;
+        
         const networkId = await getNetworkId();
         
         // Network changed (different WiFi)
         if (lastNetworkId !== null && networkId !== lastNetworkId) {
-          console.log(`WiFi network changed, detecting new server IP...`);
+          isDetecting = true;
+          console.log(`\n🔄 [Network Change] WiFi network changed!`);
+          console.log(`   Old network: ${lastNetworkId}`);
+          console.log(`   New network: ${networkId}`);
+          console.log(`   Detecting new server IP...\n`);
           hasLoggedConnection = false;
+          const oldIP = currentIP;
           currentIP = null;
           currentNetworkId = null;
+          
           // Clear stored IPs for old network
           const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
           if (networkIPsJson) {
@@ -349,13 +389,25 @@ export const startNetworkMonitoring = async () => {
             delete networkIPs[lastNetworkId];
             await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
           }
-          // Detect new IP for new network
-          await getServerIP();
+          
+          // Detect new IP for new network (force refresh, show logs)
+          const newIP = await getServerIP(false, true); // Show logs, force refresh
+          if (newIP && newIP !== oldIP) {
+            console.log(`\n🎉 [Network Change] Successfully connected to new network!`);
+            console.log(`   IP changed: ${oldIP || 'none'} -> ${newIP}:${DEFAULT_PORT}\n`);
+            // Notify all listeners immediately
+            notifyListeners(newIP);
+          }
+          isDetecting = false;
         } else if (currentIP) {
-          // Same network, verify IP still works
-          const stillWorks = await testIPConnection(currentIP, true);
+          // Same network, verify IP still works (quick check)
+          const stillWorks = await testIPConnection(currentIP, true, 200);
           if (!stillWorks) {
+            isDetecting = true;
+            console.log(`\n⚠️ [Network Change] Current IP ${currentIP} is not responding, detecting new IP...\n`);
             hasLoggedConnection = false;
+            const oldIP = currentIP;
+            
             // Clear stored IP for this network
             const networkIPsJson = await AsyncStorage.getItem(NETWORK_IPS_KEY);
             if (networkIPsJson) {
@@ -363,14 +415,32 @@ export const startNetworkMonitoring = async () => {
               delete networkIPs[networkId];
               await AsyncStorage.setItem(NETWORK_IPS_KEY, JSON.stringify(networkIPs));
             }
-            await getServerIP();
+            
+            // Detect new IP (force refresh, show logs)
+            const newIP = await getServerIP(false, true); // Show logs, force refresh
+            if (newIP && newIP !== oldIP) {
+              console.log(`\n🔄 [Network Change] Server IP changed: ${oldIP} -> ${newIP}:${DEFAULT_PORT}\n`);
+              // Notify all listeners immediately
+              notifyListeners(newIP);
+            }
+            isDetecting = false;
           }
         } else {
           // No IP, detect one
-          await getServerIP();
+          isDetecting = true;
+          const newIP = await getServerIP(false, true); // Show logs, force refresh
+          if (newIP) {
+            notifyListeners(newIP);
+          }
+          isDetecting = false;
         }
         
         lastNetworkId = networkId;
+      } else if (!networkState.isConnected) {
+        // Network disconnected
+        console.log(`⚠️ [Network Change] Network disconnected`);
+        lastNetworkId = null;
+        currentNetworkId = null;
       }
     });
   }
