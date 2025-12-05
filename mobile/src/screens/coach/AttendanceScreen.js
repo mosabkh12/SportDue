@@ -275,12 +275,26 @@ const AttendanceScreen = ({ route }) => {
     try {
       // Use the default time if no per-day times are set
       const scheduleTime = trainingSchedule.trainingTime;
+      
+      // Filter out empty dateTimes entries (where both startTime and endTime are empty)
+      const filteredDateTimes = Object.keys(dateTimes).reduce((acc, key) => {
+        const time = dateTimes[key];
+        if (time && (time.startTime || time.endTime)) {
+          // Only include if at least one time is set
+          acc[key] = {
+            startTime: time.startTime || '',
+            endTime: time.endTime || '',
+          };
+        }
+        return acc;
+      }, {});
+      
       await apiClient.put(`/groups/${groupId}`, {
         trainingDays: trainingSchedule.trainingDays,
         trainingTime: scheduleTime,
         cancelledDates: Array.from(cancelledDates),
         addedDates: Array.from(addedDates),
-        dateTimes: Object.keys(dateTimes).length > 0 ? dateTimes : undefined,
+        dateTimes: Object.keys(filteredDateTimes).length > 0 ? filteredDateTimes : undefined,
       });
       const dayNames = trainingSchedule.trainingDays.map(
         (d) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
@@ -340,13 +354,16 @@ const AttendanceScreen = ({ route }) => {
   };
 
   const handleDateTimeChange = (dateKey, field, value) => {
-    setDateTimes((prev) => ({
-      ...prev,
-      [dateKey]: {
-        ...prev[dateKey] || trainingSchedule.trainingTime,
-        [field]: value,
-      },
-    }));
+    setDateTimes((prev) => {
+      const currentDateTimes = prev[dateKey] || {};
+      return {
+        ...prev,
+        [dateKey]: {
+          ...currentDateTimes,
+          [field]: value, // Allow empty string - don't merge with default
+        },
+      };
+    });
   };
 
   const onRefresh = async () => {
@@ -456,6 +473,32 @@ const AttendanceScreen = ({ route }) => {
   const isDateAdded = (date) => {
     const dateKey = getDateKey(date);
     return addedDates.has(dateKey);
+  };
+
+  const isPastDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
+  };
+
+  const getTimeForDate = (date) => {
+    const dateKey = getDateKey(date);
+    const dayOfWeek = date.getDay();
+    
+    // 1. Check for specific date override
+    if (dateTimes[dateKey]) {
+      return dateTimes[dateKey];
+    }
+    
+    // 2. Check for day of week override
+    if (dayTimes[dayOfWeek]) {
+      return dayTimes[dayOfWeek];
+    }
+    
+    // 3. Fallback to default training time
+    return trainingSchedule.trainingTime;
   };
 
   const isDateModified = (date) => {
@@ -914,6 +957,7 @@ const AttendanceScreen = ({ route }) => {
                     const isTimeSelected = selectedDayForTime === dayOfWeek && isSelected;
                     const isThisDateSelected = selectedDate && getDateKey(selectedDate) === dateKey;
                     const isThisDateForTime = selectedDateForTime && getDateKey(selectedDateForTime) === dateKey;
+                    const isPast = isPastDate(date);
                     
                     return (
                       <View key={index} style={styles.calendarCell}>
@@ -930,7 +974,13 @@ const AttendanceScreen = ({ route }) => {
                           ]}
                           onPress={() => {
                             if (isCurrentMonth) {
-                              handleDateClick(date);
+                              if (isPast && isSelected) {
+                                // For past dates, just show time (read-only)
+                                setSelectedDateForTime(date);
+                              } else {
+                                // Handle clicks on all dates (including cancelled ones)
+                                handleDateClick(date);
+                              }
                             }
                           }}
                           activeOpacity={0.7}
@@ -960,6 +1010,11 @@ const AttendanceScreen = ({ route }) => {
                           {isModified && !isCancelled && !isAdded && isCurrentMonth && (
                             <View style={styles.modifiedIndicator} />
                           )}
+                          {isPast && isSelected && isCurrentMonth && !isCancelled && (
+                            <View style={styles.pastDateIndicator}>
+                              <Text style={styles.pastDateIndicatorText}>-</Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
                       </View>
                     );
@@ -973,44 +1028,63 @@ const AttendanceScreen = ({ route }) => {
                   <View style={styles.dayTimeHeader}>
                     <Text style={styles.dayTimeTitle}>
                       Time for {monthNames[selectedDateForTime.getMonth()]} {selectedDateForTime.getDate()}, {selectedDateForTime.getFullYear()}
+                      {isPastDate(selectedDateForTime) && <Text style={styles.pastDateLabel}> (Past)</Text>}
                     </Text>
-                    <TouchableOpacity
-                      style={styles.removeDayButton}
-                      onPress={() => {
-                        const dateKey = getDateKey(selectedDateForTime);
-                        setDateTimes((prev) => {
-                          const updated = { ...prev };
-                          delete updated[dateKey];
-                          return updated;
-                        });
-                        setSelectedDateForTime(null);
-                      }}
-                    >
-                      <Text style={styles.removeDayButtonText}>Clear</Text>
-                    </TouchableOpacity>
+                    {!isPastDate(selectedDateForTime) && (
+                      <TouchableOpacity
+                        style={styles.removeDayButton}
+                        onPress={() => {
+                          const dateKey = getDateKey(selectedDateForTime);
+                          setDateTimes((prev) => {
+                            const updated = { ...prev };
+                            delete updated[dateKey];
+                            return updated;
+                          });
+                          setSelectedDateForTime(null);
+                        }}
+                      >
+                        <Text style={styles.removeDayButtonText}>Clear</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                   <View style={styles.timeContainer}>
                     <View style={styles.timeInputGroup}>
                       <Text style={styles.timeLabel}>Start Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={dateTimes[getDateKey(selectedDateForTime)]?.startTime || trainingSchedule.trainingTime.startTime}
-                        onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'startTime', value)}
-                        placeholder="18:00"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
-                      />
+                      {isPastDate(selectedDateForTime) ? (
+                        <View style={styles.timeDisplay}>
+                          <Text style={styles.timeDisplayTextPast}>
+                            {getTimeForDate(selectedDateForTime)?.startTime || '18:00'}
+                          </Text>
+                        </View>
+                      ) : (
+                        <TextInput
+                          style={styles.timeInput}
+                          value={dateTimes[getDateKey(selectedDateForTime)]?.startTime ?? ''}
+                          onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'startTime', value)}
+                          placeholder="18:00"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="default"
+                        />
+                      )}
                     </View>
                     <View style={styles.timeInputGroup}>
                       <Text style={styles.timeLabel}>End Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={dateTimes[getDateKey(selectedDateForTime)]?.endTime || trainingSchedule.trainingTime.endTime}
-                        onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'endTime', value)}
-                        placeholder="19:30"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
-                      />
+                      {isPastDate(selectedDateForTime) ? (
+                        <View style={styles.timeDisplay}>
+                          <Text style={styles.timeDisplayTextPast}>
+                            {getTimeForDate(selectedDateForTime)?.endTime || '19:30'}
+                          </Text>
+                        </View>
+                      ) : (
+                        <TextInput
+                          style={styles.timeInput}
+                          value={dateTimes[getDateKey(selectedDateForTime)]?.endTime ?? ''}
+                          onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'endTime', value)}
+                          placeholder="19:30"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="default"
+                        />
+                      )}
                     </View>
                   </View>
                 </View>
@@ -1039,7 +1113,7 @@ const AttendanceScreen = ({ route }) => {
                         onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'startTime', value)}
                         placeholder="18:00"
                         placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
+                        keyboardType="default"
                       />
                     </View>
                     <View style={styles.timeInputGroup}>
@@ -1050,7 +1124,7 @@ const AttendanceScreen = ({ route }) => {
                         onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'endTime', value)}
                         placeholder="19:30"
                         placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
+                        keyboardType="default"
                       />
                     </View>
                   </View>
@@ -1078,7 +1152,7 @@ const AttendanceScreen = ({ route }) => {
                         }}
                         placeholder="18:00"
                         placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
+                        keyboardType="default"
                       />
                     </View>
                     <View style={styles.timeInputGroup}>
@@ -1094,7 +1168,7 @@ const AttendanceScreen = ({ route }) => {
                         }}
                         placeholder="19:30"
                         placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
+                        keyboardType="default"
                       />
                     </View>
                   </View>

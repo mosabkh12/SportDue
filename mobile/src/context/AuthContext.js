@@ -9,17 +9,22 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user and token from storage on mount
+  // Load user and token from storage on mount (optimized for fast startup)
   useEffect(() => {
     const loadAuthData = async () => {
       try {
-        const [storedUser, storedToken] = await Promise.all([
-          AsyncStorage.getItem('sportdue:user'),
-          AsyncStorage.getItem('sportdue:token'),
-        ]);
+        // Use multiGet for faster parallel reads
+        const items = await AsyncStorage.multiGet(['sportdue:user', 'sportdue:token']);
+        const storedUser = items[0][1];
+        const storedToken = items[1][1];
 
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (parseError) {
+            // Invalid JSON, clear it
+            await AsyncStorage.removeItem('sportdue:user');
+          }
         }
         if (storedToken) {
           setToken(storedToken);
@@ -28,6 +33,7 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Error loading auth data:', error);
       } finally {
+        // Set loading to false immediately after reading storage
         setLoading(false);
       }
     };

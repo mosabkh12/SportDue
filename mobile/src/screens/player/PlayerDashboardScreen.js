@@ -27,6 +27,7 @@ const PlayerDashboardScreen = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [cancelledDates, setCancelledDates] = useState(new Set());
   const [addedDates, setAddedDates] = useState(new Set());
+  const [activeTab, setActiveTab] = useState('overview');
 
   const fetchData = async () => {
     setLoading(true);
@@ -101,6 +102,11 @@ const PlayerDashboardScreen = () => {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayShortNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  // Get current month name and year for labels
+  const currentDate = new Date();
+  const currentMonthName = monthNames[currentDate.getMonth()];
+  const currentYearForLabel = currentDate.getFullYear();
 
   const getDateKey = (date) => {
     if (typeof date === 'string') {
@@ -178,6 +184,14 @@ const PlayerDashboardScreen = () => {
     return addedDates.has(dateKey);
   };
 
+  const isPastDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
+  };
+
   const isDateInCurrentMonth = (date) => {
     return date.getMonth() === currentMonth;
   };
@@ -220,63 +234,131 @@ const PlayerDashboardScreen = () => {
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeText}>
-            Welcome, {player?.fullName || user?.fullName || 'Player'}
-          </Text>
-          {player?.group && (
-            <View style={styles.badgeContainer}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>👥 {player.group.name}</Text>
-              </View>
-              {player.group.sportType && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {player.group.sportType === 'basketball' ? '🏀' : '⚽'} {player.group.sportType}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
         {loading && !player ? (
           <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
         ) : error && !player ? (
           <Text style={styles.errorText}>{error}</Text>
         ) : player ? (
           <>
-            <View style={styles.statsContainer}>
-              <StatCard 
-                label="Monthly Fee" 
-                value={parseFloat(player.monthlyFee || 0)} 
-                format="currency"
-              />
-              <StatCard
-                label="Total Paid"
-                value={paymentSummary.totalPaid}
-                accent="#10b981"
-                format="currency"
-              />
-              <StatCard
-                label="Outstanding Balance"
-                value={outstandingBalance}
-                accent={outstandingBalance > 0 ? '#ef4444' : '#10b981'}
-                format="currency"
-              />
-              {attendanceSummary.total > 0 && (
-                <StatCard
-                  label="Attendance Rate"
-                  value={attendanceRate}
-                  accent="#6366f1"
-                  format="percentage"
-                />
-              )}
+            {/* Welcome Card */}
+            <View style={styles.welcomeCard}>
+              <Text style={styles.welcomeTitle}>
+                Welcome, {player?.fullName ? player.fullName.split(' ').map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()).join(' ') : 'Player'}
+              </Text>
+              <View style={styles.welcomeInfo}>
+                {player?.group?.name && (
+                  <View style={styles.welcomeInfoRow}>
+                    <Text style={styles.welcomeInfoLabel}>Group:</Text>
+                    <Text style={styles.welcomeInfoValue}>{player.group.name}</Text>
+                  </View>
+                )}
+                {player?.group?.coach?.username && (
+                  <View style={styles.welcomeInfoRow}>
+                    <Text style={styles.welcomeInfoLabel}>Coach:</Text>
+                    <View style={styles.welcomeInfoValueContainer}>
+                      <Text style={styles.welcomeInfoValue}>
+                        {(() => {
+                          const username = player.group.coach.username;
+                          // Extract name part (before first dash or number)
+                          const namePart = username.split(/[-0-9]/)[0];
+                          return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+                        })()}
+                      </Text>
+                      {player?.group?.coach?.phone && (
+                        <Text style={styles.welcomeInfoPhone}> • {player.group.coach.phone}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+                {player?.group?.sportType && (
+                  <View style={styles.welcomeInfoRow}>
+                    <Text style={styles.welcomeInfoLabel}>Sport:</Text>
+                    <View style={styles.welcomeInfoValueContainer}>
+                      <Text style={styles.sportIcon}>
+                        {player.group.sportType === 'basketball' ? '🏀' : player.group.sportType === 'football' ? '⚽' : ''}
+                      </Text>
+                      <Text style={styles.welcomeInfoValue}>
+                        {player.group.sportType.charAt(0).toUpperCase() + player.group.sportType.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {player?.group?.description && (
+                  <View style={styles.welcomeInfoRow}>
+                    <Text style={styles.welcomeInfoLabel}>Location:</Text>
+                    <Text style={styles.welcomeInfoValue}>
+                      {(() => {
+                        const desc = player.group.description;
+                        const lodMatch = desc.match(/lod|Lod/i);
+                        if (lodMatch) {
+                          return `City: Lod`;
+                        }
+                        return desc;
+                      })()}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
-            {player?.group && player.group.trainingDays && player.group.trainingDays.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>📅 Training Schedule</Text>
+            {/* Elegant Stats Cards */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <View style={styles.statIconContainer}>
+                  <Text style={styles.statIcon}>💰</Text>
+                </View>
+                <Text style={styles.statValue}>${parseFloat(player.monthlyFee || 0).toFixed(0)}</Text>
+                <Text style={styles.statLabel}>Monthly Fee</Text>
+              </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statIconContainer, styles.statIconContainerSuccess]}>
+                  <Text style={styles.statIcon}>✓</Text>
+                </View>
+                <Text style={[styles.statValue, styles.statValueSuccess]}>${paymentSummary.totalPaid.toFixed(0)}</Text>
+                <Text style={styles.statLabel}>Paid This Month</Text>
+              </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statIconContainer, outstandingBalance > 0 ? styles.statIconContainerError : styles.statIconContainerSuccess]}>
+                  <Text style={styles.statIcon}>{outstandingBalance > 0 ? '⚠' : '✓'}</Text>
+                </View>
+                <Text style={[styles.statValue, outstandingBalance > 0 && styles.statValueError]}>
+                  ${outstandingBalance.toFixed(0)}
+                </Text>
+                <Text style={styles.statLabel}>Outstanding</Text>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
+                onPress={() => setActiveTab('overview')}
+              >
+                <Text style={[styles.tabIcon, activeTab === 'overview' && styles.tabIconActive]}>📅</Text>
+                <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>Schedule</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'payments' && styles.tabActive]}
+                onPress={() => setActiveTab('payments')}
+              >
+                <Text style={[styles.tabIcon, activeTab === 'payments' && styles.tabIconActive]}>💳</Text>
+                <Text style={[styles.tabText, activeTab === 'payments' && styles.tabTextActive]}>Payments</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'attendance' && styles.tabActive]}
+                onPress={() => setActiveTab('attendance')}
+              >
+                <Text style={[styles.tabIcon, activeTab === 'attendance' && styles.tabIconActive]}>📊</Text>
+                <Text style={[styles.tabText, activeTab === 'attendance' && styles.tabTextActive]}>Attendance</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Overview Tab - Training Schedule */}
+            {activeTab === 'overview' && (
+              <>
+                {player?.group && player.group.trainingDays && player.group.trainingDays.length > 0 && (
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>📅 Training Schedule</Text>
                 
                 {/* Selected Days Indicator */}
                 {player.group.trainingDays.length > 0 && (
@@ -329,6 +411,7 @@ const PlayerDashboardScreen = () => {
                       const dateNumber = date.getDate();
                       const dateKey = getDateKey(date);
                       const isThisDateSelected = selectedDate && getDateKey(selectedDate) === dateKey;
+                      const isPast = isPastDate(date);
                       
                       return (
                         <View key={index} style={styles.calendarCell}>
@@ -336,7 +419,8 @@ const PlayerDashboardScreen = () => {
                             style={[
                               styles.calendarDayButton,
                               !isCurrentMonth && styles.calendarDayButtonOtherMonth,
-                              isSelected && isCurrentMonth && !isCancelled && styles.calendarDayButtonSelected,
+                              isSelected && isCurrentMonth && !isCancelled && !isPast && styles.calendarDayButtonSelected,
+                              isPast && isSelected && isCurrentMonth && !isCancelled && styles.calendarDayButtonPast,
                               isCancelled && isCurrentMonth && styles.calendarDayButtonCancelled,
                               isAdded && isCurrentMonth && styles.calendarDayButtonAdded,
                               isThisDateSelected && styles.calendarDayButtonSelectedDate,
@@ -353,7 +437,8 @@ const PlayerDashboardScreen = () => {
                               style={[
                                 styles.calendarDayText,
                                 !isCurrentMonth && styles.calendarDayTextOtherMonth,
-                                isSelected && isCurrentMonth && !isCancelled && styles.calendarDayTextSelected,
+                                isSelected && isCurrentMonth && !isCancelled && !isPast && styles.calendarDayTextSelected,
+                                isPast && isSelected && isCurrentMonth && !isCancelled && styles.calendarDayTextPast,
                                 isCancelled && isCurrentMonth && styles.calendarDayTextCancelled,
                                 isAdded && isCurrentMonth && styles.calendarDayTextAdded,
                               ]}
@@ -370,6 +455,11 @@ const PlayerDashboardScreen = () => {
                                 <Text style={styles.addedIndicatorText}>+</Text>
                               </View>
                             )}
+                            {isPast && isSelected && isCurrentMonth && !isCancelled && (
+                              <View style={styles.pastDateIndicator}>
+                                <Text style={styles.pastDateIndicatorText}>-</Text>
+                              </View>
+                            )}
                           </TouchableOpacity>
                         </View>
                       );
@@ -382,16 +472,21 @@ const PlayerDashboardScreen = () => {
                   <View style={styles.selectedDateTimeContainer}>
                     <Text style={styles.selectedDateTitle}>
                       {dayNames[selectedDate.getDay()]}, {monthNames[selectedDate.getMonth()]} {selectedDate.getDate()}
+                      {isPastDate(selectedDate) && <Text style={styles.pastDateLabel}> (Past)</Text>}
                     </Text>
                     {getTimeForDate(selectedDate) && (
                       <View style={styles.timeDisplayContainer}>
                         <View style={styles.timeSlot}>
                           <Text style={styles.timeSlotLabel}>Start Time</Text>
-                          <Text style={styles.timeSlotValue}>{getTimeForDate(selectedDate).startTime}</Text>
+                          <Text style={[styles.timeSlotValue, isPastDate(selectedDate) && styles.timeSlotValuePast]}>
+                            {getTimeForDate(selectedDate).startTime}
+                          </Text>
                         </View>
                         <View style={styles.timeSlot}>
                           <Text style={styles.timeSlotLabel}>End Time</Text>
-                          <Text style={styles.timeSlotValue}>{getTimeForDate(selectedDate).endTime}</Text>
+                          <Text style={[styles.timeSlotValue, isPastDate(selectedDate) && styles.timeSlotValuePast]}>
+                            {getTimeForDate(selectedDate).endTime}
+                          </Text>
                         </View>
                       </View>
                     )}
@@ -417,34 +512,18 @@ const PlayerDashboardScreen = () => {
                     </View>
                   </View>
                 )}
-              </View>
+                  </View>
+                )}
+              </>
             )}
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Contact Information</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Phone:</Text>
-                <Text style={styles.infoValue}>{player.phone}</Text>
-              </View>
-              {player?.group && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Group:</Text>
-                  <Text style={styles.infoValue}>{player.group.name}</Text>
-                </View>
-              )}
-              {player.notes && (
-                <View style={styles.notesContainer}>
-                  <Text style={styles.infoLabel}>Notes:</Text>
-                  <Text style={styles.notesText}>{player.notes}</Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Payment History</Text>
-              {!payments.length ? (
-                <Text style={styles.emptyText}>No payment records yet.</Text>
-              ) : (
+            {/* Payments Tab */}
+            {activeTab === 'payments' && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Payment History</Text>
+                {!payments.length ? (
+                  <Text style={styles.emptyText}>No payment records yet.</Text>
+                ) : (
                 <FlatList
                   data={payments || []}
                   keyExtractor={(item) => item._id}
@@ -466,10 +545,13 @@ const PlayerDashboardScreen = () => {
                   )}
                 />
               )}
-            </View>
+              </View>
+            )}
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Attendance History</Text>
+            {/* Attendance Tab */}
+            {activeTab === 'attendance' && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Attendance History</Text>
               {!attendance.length ? (
                 <Text style={styles.emptyText}>No attendance records yet.</Text>
               ) : (
@@ -513,7 +595,8 @@ const PlayerDashboardScreen = () => {
                   />
                 </>
               )}
-            </View>
+              </View>
+            )}
           </>
         ) : null}
       </ScrollView>

@@ -21,35 +21,35 @@ export const colors = {
 };
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
+  xs: 3,
+  sm: 6,
+  md: 10,
+  lg: 16,
+  xl: 20,
 };
 
 export const typography = {
   h1: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '800',
     color: colors.textPrimary,
   },
   h2: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   h3: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   body: {
-    fontSize: 16,
+    fontSize: 13,
     color: colors.textPrimary,
   },
   caption: {
-    fontSize: 14,
+    fontSize: 11,
     color: colors.textMuted,
   },
 };

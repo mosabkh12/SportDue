@@ -354,10 +354,13 @@ const notifyListeners = (newIP) => {
 // Get current IP
 export const getCurrentIP = () => currentIP;
 
-// Start network monitoring
+// Start network monitoring (non-blocking)
 export const startNetworkMonitoring = async () => {
   console.log(`🚀 [IP Detection] Starting network monitoring...`);
-  await getServerIP();
+  // Don't await - start in background for fast app startup
+  getServerIP(true, false).catch(() => {
+    // Silent error
+  });
   
   if (Platform.OS !== 'web') {
     let lastNetworkId = null;

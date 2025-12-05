@@ -12,15 +12,27 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
-// Initialize base URL
+// Initialize base URL (optimized for fast startup)
 const initializeBaseURL = async () => {
   try {
-    const serverIP = await getServerIP();
-    currentServerIP = serverIP;
-    baseURL = `http://${serverIP}:${PORT}/api`;
-    apiClient.defaults.baseURL = baseURL;
+    // Try to get cached IP first (fast path)
+    const { getCurrentIP } = require('../utils/networkDetector');
+    const cachedIP = getCurrentIP();
     
-    // Start monitoring network changes
+    if (cachedIP && cachedIP !== 'localhost') {
+      // Use cached IP immediately for fast startup
+      currentServerIP = cachedIP;
+      baseURL = `http://${cachedIP}:${PORT}/api`;
+      apiClient.defaults.baseURL = baseURL;
+      console.log(`⚡ [API Client] Using cached IP: ${cachedIP}:${PORT} (fast startup)`);
+    } else {
+      // Fallback to localhost for immediate availability
+      baseURL = `http://localhost:${PORT}/api`;
+      apiClient.defaults.baseURL = baseURL;
+      console.log(`⚡ [API Client] Using localhost fallback (fast startup)`);
+    }
+    
+    // Start monitoring network changes in background (non-blocking)
     startNetworkMonitoring();
     
     // Subscribe to IP changes and update base URL
@@ -36,12 +48,26 @@ const initializeBaseURL = async () => {
         console.log(`✅ [API Client] Base URL updated: ${newBaseURL}\n`);
       }
     });
+    
+    // Detect IP in background (non-blocking, will update when found)
+    getServerIP(true).then((detectedIP) => {
+      if (detectedIP && detectedIP !== currentServerIP && detectedIP !== 'localhost') {
+        currentServerIP = detectedIP;
+        baseURL = `http://${detectedIP}:${PORT}/api`;
+        apiClient.defaults.baseURL = baseURL;
+        console.log(`✅ [API Client] Background IP detection complete: ${detectedIP}:${PORT}`);
+      }
+    }).catch(() => {
+      // Silent error
+    });
   } catch (error) {
-    // Silent error
+    // Silent error - use localhost fallback
+    baseURL = `http://localhost:${PORT}/api`;
+    apiClient.defaults.baseURL = baseURL;
   }
 };
 
-// Initialize immediately
+// Initialize immediately (non-blocking)
 initializeBaseURL();
 
 // Request interceptor to add token to requests

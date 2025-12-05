@@ -14,7 +14,7 @@ const getMyProfile = catchAsync(async (req, res, next) => {
     select: 'name description coachId trainingDays trainingTime cancelledDates addedDates dateTimes',
     populate: {
       path: 'coachId',
-      select: 'sportType'
+      select: 'username email phone sportType'
     }
   });
   
@@ -35,7 +35,12 @@ const getMyProfile = catchAsync(async (req, res, next) => {
       trainingTime: player.groupId.trainingTime || null,
       cancelledDates: player.groupId.cancelledDates || [],
       addedDates: player.groupId.addedDates || [],
-      dateTimes: player.groupId.dateTimes && typeof player.groupId.dateTimes === 'object' ? player.groupId.dateTimes : {}
+      dateTimes: player.groupId.dateTimes && typeof player.groupId.dateTimes === 'object' ? player.groupId.dateTimes : {},
+      coach: player.groupId.coachId ? {
+        username: player.groupId.coachId.username,
+        email: player.groupId.coachId.email,
+        phone: player.groupId.coachId.phone,
+      } : null
     };
   }
   
