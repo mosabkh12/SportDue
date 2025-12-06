@@ -1,10 +1,25 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { getServerIP, subscribeToNetworkChanges, startNetworkMonitoring } from '../utils/networkDetector';
 
 let baseURL = 'http://localhost:5000/api';
 const PORT = 5000;
 let currentServerIP = null;
+
+// Get production API URL from config (for production builds)
+const getProductionAPIUrl = () => {
+  try {
+    const apiUrl = Constants.expoConfig?.extra?.apiUrl;
+    // Check if it's a production URL (not localhost)
+    if (apiUrl && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1')) {
+      return apiUrl;
+    }
+  } catch (error) {
+    // Silent error
+  }
+  return null;
+};
 
 // Create axios instance
 const apiClient = axios.create({
@@ -15,6 +30,16 @@ const apiClient = axios.create({
 // Initialize base URL (optimized for fast startup)
 const initializeBaseURL = async () => {
   try {
+    // First, check for production API URL (from environment/config)
+    const productionUrl = getProductionAPIUrl();
+    if (productionUrl) {
+      baseURL = productionUrl;
+      apiClient.defaults.baseURL = baseURL;
+      console.log(`🌐 [API Client] Using production API: ${productionUrl}`);
+      return; // Don't use network detection in production
+    }
+    
+    // Development mode: Use network detection
     // Try to get cached IP first (fast path)
     const { getCurrentIP } = require('../utils/networkDetector');
     const cachedIP = getCurrentIP();
@@ -32,34 +57,37 @@ const initializeBaseURL = async () => {
       console.log(`⚡ [API Client] Using localhost fallback (fast startup)`);
     }
     
-    // Start monitoring network changes in background (non-blocking)
-    startNetworkMonitoring();
-    
-    // Subscribe to IP changes and update base URL
-    subscribeToNetworkChanges((newIP) => {
-      if (newIP && newIP !== currentServerIP) {
-        console.log(`\n🔄 [API Client] Updating API base URL`);
-        console.log(`   Old IP: ${currentServerIP || 'none'}`);
-        console.log(`   New IP: ${newIP}:${PORT}`);
-        currentServerIP = newIP;
-        const newBaseURL = `http://${newIP}:${PORT}/api`;
-        baseURL = newBaseURL;
-        apiClient.defaults.baseURL = newBaseURL;
-        console.log(`✅ [API Client] Base URL updated: ${newBaseURL}\n`);
-      }
-    });
-    
-    // Detect IP in background (non-blocking, will update when found)
-    getServerIP(true).then((detectedIP) => {
-      if (detectedIP && detectedIP !== currentServerIP && detectedIP !== 'localhost') {
-        currentServerIP = detectedIP;
-        baseURL = `http://${detectedIP}:${PORT}/api`;
-        apiClient.defaults.baseURL = baseURL;
-        console.log(`✅ [API Client] Background IP detection complete: ${detectedIP}:${PORT}`);
-      }
-    }).catch(() => {
-      // Silent error
-    });
+    // Only use network detection in development (not production)
+    if (!productionUrl) {
+      // Start monitoring network changes in background (non-blocking)
+      startNetworkMonitoring();
+      
+      // Subscribe to IP changes and update base URL
+      subscribeToNetworkChanges((newIP) => {
+        if (newIP && newIP !== currentServerIP) {
+          console.log(`\n🔄 [API Client] Updating API base URL`);
+          console.log(`   Old IP: ${currentServerIP || 'none'}`);
+          console.log(`   New IP: ${newIP}:${PORT}`);
+          currentServerIP = newIP;
+          const newBaseURL = `http://${newIP}:${PORT}/api`;
+          baseURL = newBaseURL;
+          apiClient.defaults.baseURL = newBaseURL;
+          console.log(`✅ [API Client] Base URL updated: ${newBaseURL}\n`);
+        }
+      });
+      
+      // Detect IP in background (non-blocking, will update when found)
+      getServerIP(true).then((detectedIP) => {
+        if (detectedIP && detectedIP !== currentServerIP && detectedIP !== 'localhost') {
+          currentServerIP = detectedIP;
+          baseURL = `http://${detectedIP}:${PORT}/api`;
+          apiClient.defaults.baseURL = baseURL;
+          console.log(`✅ [API Client] Background IP detection complete: ${detectedIP}:${PORT}`);
+        }
+      }).catch(() => {
+        // Silent error
+      });
+    }
   } catch (error) {
     // Silent error - use localhost fallback
     baseURL = `http://localhost:${PORT}/api`;
@@ -125,8 +153,9 @@ apiClient.interceptors.response.use(
       return Promise.reject(authError);
     }
 
-    // Handle network errors - try to reconnect with new IP (only once per request)
-    if ((error.code === 'ECONNREFUSED' || error.message.includes('Network request failed') || error.code === 'ERR_NETWORK' || error.code === 'ETIMEDOUT') && !error.config._retry) {
+    // Handle network errors - try to reconnect with new IP (only in development, only once per request)
+    const productionUrl = getProductionAPIUrl();
+    if (!productionUrl && (error.code === 'ECONNREFUSED' || error.message.includes('Network request failed') || error.code === 'ERR_NETWORK' || error.code === 'ETIMEDOUT') && !error.config._retry) {
       try {
         // First, try to get the latest IP from network detector (might have changed)
         const { getServerIP } = require('../utils/networkDetector');
