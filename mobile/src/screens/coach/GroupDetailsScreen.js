@@ -15,8 +15,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useNotifications } from '../../context/NotificationContext';
 import apiClient from '../../services/apiClient';
 import StatCard from '../../components/StatCard';
+import { AppScreen } from '../../ui/components';
 import { styles } from '../../styles/screens/GroupDetailsScreen.styles';
 import { colors } from '../../styles/theme';
+import { formatGroupSchedule } from '../../utils/schedule';
 
 const GroupDetailsScreen = ({ route }) => {
   const { groupId, groupName } = route.params;
@@ -194,17 +196,21 @@ const GroupDetailsScreen = ({ route }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-      </View>
+      <AppScreen>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        </View>
+      </AppScreen>
     );
   }
 
   if (!group) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Group not found</Text>
-      </View>
+      <AppScreen>
+        <View style={styles.container}>
+          <Text style={styles.errorText}>Group not found</Text>
+        </View>
+      </AppScreen>
     );
   }
 
@@ -212,7 +218,8 @@ const GroupDetailsScreen = ({ route }) => {
   const getDaySuffix = (day) => (day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th');
 
   return (
-    <View style={styles.container}>
+    <AppScreen>
+      <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -223,6 +230,7 @@ const GroupDetailsScreen = ({ route }) => {
           {group.description && (
             <Text style={styles.headerSubtitle} numberOfLines={2}>{group.description}</Text>
           )}
+          <Text style={styles.headerSchedule}>{formatGroupSchedule(group)}</Text>
         </View>
         <TouchableOpacity onPress={handleDeleteGroup} style={styles.deleteBtn}>
           <Text style={styles.deleteIcon}>🗑️</Text>
@@ -279,6 +287,16 @@ const GroupDetailsScreen = ({ route }) => {
         >
           <Text style={styles.actionBtnIcon}>📨</Text>
           <Text style={styles.actionBtnText}>Reminders</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.primaryBtn]}
+          onPress={() => navigation.navigate('GroupScheduleEditor', { groupId, groupName: group.name })}
+        >
+          <Text style={styles.actionBtnIcon}>📅</Text>
+          <Text style={styles.actionBtnText}>Edit Schedule</Text>
         </TouchableOpacity>
       </View>
 
@@ -617,7 +635,8 @@ const GroupDetailsScreen = ({ route }) => {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </AppScreen>
   );
 };
 

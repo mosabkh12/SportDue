@@ -9,10 +9,10 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { getCurrentIP } from '../utils/networkDetector';
+import { AppScreen, AppBackground } from '../ui/components';
 import { styles } from '../styles/screens/LoginScreen.styles';
 import { colors } from '../styles/theme';
 
@@ -55,18 +55,16 @@ const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <LinearGradient
-        colors={['#1f2937', '#111827', '#000000']}
-        style={styles.gradient}
+    <AppScreen edges={[]}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <AppBackground>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.content}>
             <View style={styles.logoContainer}>
               <View style={styles.logoIcon}>
@@ -148,8 +146,9 @@ const LoginScreen = () => {
             </View>
           </View>
         </ScrollView>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+        </AppBackground>
+      </KeyboardAvoidingView>
+    </AppScreen>
   );
 };
 

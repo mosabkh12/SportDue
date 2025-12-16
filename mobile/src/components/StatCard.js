@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, spacing, radius } from '../ui/tokens';
 
-const StatCard = ({ label, value, accent = '#22c55e', format }) => {
+const StatCard = ({ label, value, accent = colors.primary, format }) => {
   // Handle undefined, null, or NaN values - always show a number
   const numValue = typeof value === 'string' && value.startsWith('$') 
     ? parseFloat(value.replace('$', '')) 
@@ -32,27 +33,27 @@ const StatCard = ({ label, value, accent = '#22c55e', format }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: colors.border,
     position: 'relative',
     overflow: 'hidden',
     flex: 1,
   },
   chip: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     width: 8,
     height: 8,
     borderRadius: 4,
   },
   label: {
     fontSize: 10,
-    color: '#9ca3af',
+    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     fontWeight: '600',

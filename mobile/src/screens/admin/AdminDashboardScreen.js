@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import apiClient from '../../services/apiClient';
 import StatCard from '../../components/StatCard';
+import { AppScreen } from '../../ui/components';
 import { styles } from '../../styles/screens/AdminDashboardScreen.styles';
 import { colors } from '../../styles/theme';
 
@@ -111,16 +112,17 @@ const AdminDashboardScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <Text style={styles.logoutText} onPress={logout}>Logout</Text>
-      </View>
+    <AppScreen>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Admin Dashboard</Text>
+          <Text style={styles.logoutText} onPress={logout}>Logout</Text>
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
         <View style={styles.statsContainer}>
           <StatCard label="Coaches" value={coaches.length} />
           <StatCard label="Groups" value={totals.groups} accent="#10b981" />
@@ -308,7 +310,8 @@ const AdminDashboardScreen = () => {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </AppScreen>
   );
 };
 

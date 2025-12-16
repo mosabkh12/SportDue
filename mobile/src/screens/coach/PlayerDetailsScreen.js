@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useNotifications } from '../../context/NotificationContext';
 import apiClient from '../../services/apiClient';
 import StatCard from '../../components/StatCard';
+import { AppScreen } from '../../ui/components';
 import { colors } from '../../styles/theme';
 import { styles } from '../../styles/screens/PlayerDetailsScreen.styles';
 
@@ -298,26 +299,31 @@ const PlayerDetailsScreen = ({ route }) => {
 
   if (loading && !player) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading player...</Text>
-      </View>
+      <AppScreen>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading player...</Text>
+        </View>
+      </AppScreen>
     );
   }
 
   if (error && !player) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <AppScreen>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </AppScreen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <AppScreen>
+      <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -887,7 +893,8 @@ const PlayerDetailsScreen = ({ route }) => {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+      </View>
+    </AppScreen>
   );
 };
 

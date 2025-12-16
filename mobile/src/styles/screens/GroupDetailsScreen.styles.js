@@ -4,7 +4,6 @@ import { colors, spacing } from '../theme';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
   loader: {
     marginTop: 100,
@@ -49,6 +48,12 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     lineHeight: 14,
+  },
+  headerSchedule: {
+    fontSize: 11,
+    color: colors.primary,
+    marginTop: 4,
+    fontWeight: '600',
   },
   deleteBtn: {
     width: 32,

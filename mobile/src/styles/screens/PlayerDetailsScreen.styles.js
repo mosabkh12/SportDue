@@ -4,7 +4,6 @@ import { colors, spacing, typography, shadows } from '../theme';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
   },
   scrollView: {
     flex: 1,

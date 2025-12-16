@@ -2,25 +2,28 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
-  TextInput,
-  Modal,
-  ActivityIndicator,
   FlatList,
-  RefreshControl,
+  ActivityIndicator,
+  StyleSheet,
+  Modal,
+  Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNotifications } from '../../context/NotificationContext';
 import apiClient from '../../services/apiClient';
-import StatCard from '../../components/StatCard';
-import { styles } from '../../styles/screens/AttendanceScreen.styles';
-import { colors } from '../../styles/theme';
+import { AppButton, AppInput } from '../../ui/components';
+import PlayerAttendanceRow from '../../components/PlayerAttendanceRow';
+import { colors, spacing, radius, typography } from '../../ui/tokens';
 
 const AttendanceScreen = ({ route }) => {
-  const { groupId } = route.params;
+  const { groupId, date: initialDate } = route.params || {};
   const navigation = useNavigation();
   const notifications = useNotifications();
+  const insets = useSafeAreaInsets();
 
   const today = useMemo(() => {
     const d = new Date();
@@ -29,70 +32,27 @@ const AttendanceScreen = ({ route }) => {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }, []);
-  const [date, setDate] = useState(today);
+
+  const [date, setDate] = useState(initialDate || today);
   const [players, setPlayers] = useState([]);
-  const [attendance, setAttendance] = useState({});
+  const [originalStatusMap, setOriginalStatusMap] = useState({}); // Last loaded attendance snapshot
+  const [draftStatusMap, setDraftStatusMap] = useState({}); // Editable draft copy
+  const [dirty, setDirty] = useState(false); // Unsaved changes flag
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [group, setGroup] = useState(null);
-  const [trainingDays, setTrainingDays] = useState([]);
-  const [trainingTime, setTrainingTime] = useState(null);
-  const [trainingSchedule, setTrainingSchedule] = useState({
-    trainingDays: [],
-    trainingTime: { startTime: '18:00', endTime: '19:30' },
-  });
-  const [dayTimes, setDayTimes] = useState({}); // Store times per day
-  const [modifiedDays, setModifiedDays] = useState(new Set()); // Track modified days
-  const [selectedDayForTime, setSelectedDayForTime] = useState(null); // Day selected for time editing
-  const [cancelledDates, setCancelledDates] = useState(new Set()); // Track cancelled specific dates
-  const [addedDates, setAddedDates] = useState(new Set()); // Track added replacement dates
-  const [selectedDate, setSelectedDate] = useState(null); // Currently selected date for actions
-  const [selectedDateForTime, setSelectedDateForTime] = useState(null); // Specific date selected for time editing
-  const [dateTimes, setDateTimes] = useState({}); // Store custom times for specific dates (YYYY-MM-DD format)
-  const [lastTap, setLastTap] = useState({ date: null, time: 0 }); // Track double tap
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'unmarked' | 'present' | 'absent' | 'late'
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Date picker state
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [updatingSchedule, setUpdatingSchedule] = useState(false);
-  const [showScheduleConfig, setShowScheduleConfig] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const fetchPlayers = useCallback(async () => {
     try {
       const { data } = await apiClient.get(`/groups/${groupId}`);
       setPlayers(data.players || []);
-      setGroup(data.group);
-      setTrainingDays(data.group?.trainingDays || []);
-      setTrainingTime(data.group?.trainingTime || null);
-      const defaultTime = data.group?.trainingTime || { startTime: '18:00', endTime: '19:30' };
-      const days = data.group?.trainingDays || [];
-      const initialDayTimes = {};
-      days.forEach((day) => {
-        initialDayTimes[day] = defaultTime;
-      });
-      setTrainingSchedule({
-        trainingDays: days,
-        trainingTime: defaultTime,
-      });
-      setDayTimes(initialDayTimes);
-      setModifiedDays(new Set());
-      // Load cancelled and added dates if they exist
-      if (data.group?.cancelledDates && Array.isArray(data.group.cancelledDates)) {
-        setCancelledDates(new Set(data.group.cancelledDates));
-      } else {
-        setCancelledDates(new Set());
-      }
-      if (data.group?.addedDates && Array.isArray(data.group.addedDates)) {
-        setAddedDates(new Set(data.group.addedDates));
-      } else {
-        setAddedDates(new Set());
-      }
-      // Load per-date times from backend if they exist
-      if (data.group?.dateTimes && typeof data.group.dateTimes === 'object') {
-        setDateTimes(data.group.dateTimes);
-      } else {
-        setDateTimes({});
-      }
     } catch (err) {
       notifications.error(err.message || 'Failed to load group');
     }
@@ -112,9 +72,16 @@ const AttendanceScreen = ({ route }) => {
             signature: item.signature || '',
           };
         });
-        setAttendance(mapped);
+        // On load: set originalStatusMap and draftStatusMap = originalStatusMap, dirty=false
+        const deepCopy = JSON.parse(JSON.stringify(mapped));
+        setOriginalStatusMap(deepCopy);
+        setDraftStatusMap(deepCopy);
+        setDirty(false);
       } catch (err) {
         // Silent error - attendance might not exist for this date
+        setOriginalStatusMap({});
+        setDraftStatusMap({});
+        setDirty(false);
       }
     },
     [groupId]
@@ -128,43 +95,54 @@ const AttendanceScreen = ({ route }) => {
     fetchAttendance(date);
   }, [date, fetchAttendance]);
 
-  const handleStatusChange = (playerId, value) => {
-    setAttendance((prev) => ({
-      ...prev,
-      [playerId]: {
-        ...prev[playerId],
-        status: value === '' ? null : value,
-        isPresent: value === 'present',
-      },
-    }));
-  };
+  // Check if draft differs from original (dirty flag)
+  useEffect(() => {
+    const isDirty = JSON.stringify(draftStatusMap) !== JSON.stringify(originalStatusMap);
+    setDirty(isDirty);
+  }, [draftStatusMap, originalStatusMap]);
 
-  const handleSignatureChange = (playerId, value) => {
-    setAttendance((prev) => ({
-      ...prev,
-      [playerId]: {
-        ...prev[playerId],
-        signature: value,
-      },
-    }));
+  const handleStatusChange = useCallback((playerId, value) => {
+    // On status change: update draftStatusMap[playerId], dirty = draft differs from original
+    setDraftStatusMap((prev) => {
+      const updated = {
+        ...prev,
+        [playerId]: {
+          ...prev[playerId],
+          status: value === '' ? null : value,
+          isPresent: value === 'present' || value === 'late', // Late is saved as present
+          signature: prev[playerId]?.signature || '',
+        },
+      };
+      return updated;
+    });
+  }, []);
+
+  const handleDiscardChanges = () => {
+    // Reset draftStatusMap back to originalStatusMap and dirty=false
+    setDraftStatusMap(JSON.parse(JSON.stringify(originalStatusMap)));
+    setDirty(false);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Build changes array where draft != original
+      // The existing API expects FULL list, so we build full list from draft
       const entries = players
         .filter((player) => {
-          const playerAttendance = attendance[player._id];
-          return playerAttendance?.status === 'present' || playerAttendance?.status === 'absent';
+          const playerAttendance = draftStatusMap[player._id];
+          return playerAttendance?.status === 'present' || 
+                 playerAttendance?.status === 'absent' || 
+                 playerAttendance?.status === 'late';
         })
         .map((player) => ({
           playerId: player._id,
-          isPresent: attendance[player._id]?.status === 'present',
-          signature: attendance[player._id]?.signature || '',
+          isPresent: draftStatusMap[player._id]?.status === 'present' || draftStatusMap[player._id]?.status === 'late',
+          signature: draftStatusMap[player._id]?.signature || '',
         }));
 
       if (entries.length === 0) {
-        notifications.error('Please select status (Present or Absent) for at least one player');
+        notifications.error('Please select status for at least one player');
         setSaving(false);
         return;
       }
@@ -174,9 +152,13 @@ const AttendanceScreen = ({ route }) => {
         date,
         records: entries,
       });
+      
+      // On success: originalStatusMap = draftStatusMap, dirty=false
       notifications.success('Attendance saved successfully!');
-      fetchAttendance(date);
+      setOriginalStatusMap(JSON.parse(JSON.stringify(draftStatusMap)));
+      setDirty(false);
     } catch (err) {
+      // On error: show Alert/Toast and keep draft unsaved
       notifications.error(err.message || 'Failed to save attendance');
     } finally {
       setSaving(false);
@@ -184,353 +166,95 @@ const AttendanceScreen = ({ route }) => {
   };
 
   const stats = useMemo(() => {
-    const withStatus = players.filter((p) => {
-      const status = attendance[p._id]?.status;
-      return status === 'present' || status === 'absent';
-    });
-    const present = players.filter((p) => attendance[p._id]?.status === 'present').length;
-    const absent = players.filter((p) => attendance[p._id]?.status === 'absent').length;
-    const unmarked = players.length - withStatus.length;
-    const percentage = withStatus.length > 0 ? Math.round((present / withStatus.length) * 100) : 0;
-    return { present, absent, unmarked, total: players.length, withStatus: withStatus.length, percentage };
-  }, [players, attendance]);
+    const present = players.filter((p) => draftStatusMap[p._id]?.status === 'present').length;
+    const absent = players.filter((p) => draftStatusMap[p._id]?.status === 'absent').length;
+    const late = players.filter((p) => draftStatusMap[p._id]?.status === 'late').length;
+    return { present, absent, late };
+  }, [players, draftStatusMap]);
 
   const filteredPlayers = useMemo(() => {
-    if (!searchQuery.trim()) return players;
-    const query = searchQuery.toLowerCase();
-    return players.filter((p) => p.fullName.toLowerCase().includes(query));
-  }, [players, searchQuery]);
+    let filtered = players;
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((p) => p.fullName.toLowerCase().includes(query));
+    }
+    
+    // Filter by status
+    if (statusFilter === 'unmarked') {
+      filtered = filtered.filter((p) => !draftStatusMap[p._id]?.status);
+    } else if (statusFilter !== 'all') {
+      filtered = filtered.filter((p) => draftStatusMap[p._id]?.status === statusFilter);
+    }
+    
+    return filtered;
+  }, [players, draftStatusMap, searchQuery, statusFilter]);
 
   const markAllPresent = () => {
-    const updated = {};
-    players.forEach((player) => {
-      updated[player._id] = {
-        status: 'present',
-        isPresent: true,
-        signature: attendance[player._id]?.signature || '',
-      };
+    // "All Present": update all players in draftStatusMap, dirty=true
+    setDraftStatusMap((prev) => {
+      const updated = { ...prev };
+      players.forEach((player) => {
+        updated[player._id] = {
+          status: 'present',
+          isPresent: true,
+          signature: prev[player._id]?.signature || '',
+        };
+      });
+      return updated;
     });
-    setAttendance(updated);
   };
 
   const markAllAbsent = () => {
-    const updated = {};
-    players.forEach((player) => {
-      updated[player._id] = {
-        status: 'absent',
-        isPresent: false,
-        signature: attendance[player._id]?.signature || '',
-      };
-    });
-    setAttendance(updated);
-  };
-
-  const isTrainingDay = (dateString) => {
-    if (trainingDays.length === 0) return true;
-    // Parse date string as local date (not UTC)
-    const [year, month, day] = dateString.split('-').map(Number);
-    const checkDate = new Date(year, month - 1, day);
-    const dayOfWeek = checkDate.getDay();
-    return trainingDays.includes(dayOfWeek);
-  };
-
-  const navigateToTrainingDay = (direction) => {
-    // Parse date string as local date
-    const [year, month, day] = date.split('-').map(Number);
-    const currentDate = new Date(year, month - 1, day);
-    let daysToAdd = direction === 'next' ? 1 : -1;
-    let attempts = 0;
-    const maxAttempts = 14;
-
-    while (attempts < maxAttempts) {
-      currentDate.setDate(currentDate.getDate() + daysToAdd);
-      const dateString = getDateKey(currentDate);
-
-      if (trainingDays.length === 0 || isTrainingDay(dateString)) {
-        setDate(dateString);
-        return;
-      }
-      attempts++;
-    }
-    navigateDate(direction === 'next' ? 1 : -1);
-  };
-
-  const navigateDate = (days) => {
-    // Parse date string as local date
-    const [year, month, day] = date.split('-').map(Number);
-    const currentDate = new Date(year, month - 1, day);
-    currentDate.setDate(currentDate.getDate() + days);
-    setDate(getDateKey(currentDate));
-  };
-
-  const setDateToday = () => setDate(today);
-
-  // Helper function to convert time string to minutes for comparison
-  const timeToMinutes = (timeStr) => {
-    if (!timeStr) return 0;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return (hours || 0) * 60 + (minutes || 0);
-  };
-
-  // Helper function to check if two time ranges overlap
-  const timeRangesOverlap = (start1, end1, start2, end2) => {
-    const start1Min = timeToMinutes(start1);
-    const end1Min = timeToMinutes(end1);
-    const start2Min = timeToMinutes(start2);
-    const end2Min = timeToMinutes(end2);
-    
-    // Check if ranges overlap
-    return (start1Min < end2Min && end1Min > start2Min);
-  };
-
-  // Check for time conflicts with other groups on specific dates
-  const checkTimeConflicts = async () => {
-    try {
-      // Fetch all groups to check for conflicts
-      const { data: allGroups } = await apiClient.get('/groups');
-      
-      const scheduleTime = trainingSchedule.trainingTime;
-      const conflicts = [];
-
-      // Get all dates that will have training (recurring + added, excluding cancelled)
-      const trainingDates = new Set();
-      
-      // Add recurring dates (next 2 years)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const twoYearsLater = new Date(today);
-      twoYearsLater.setFullYear(twoYearsLater.getFullYear() + 2);
-      
-      trainingSchedule.trainingDays.forEach((dayIndex) => {
-        const checkDate = new Date(today);
-        const daysUntilNext = (dayIndex - checkDate.getDay() + 7) % 7;
-        if (daysUntilNext > 0) {
-          checkDate.setDate(checkDate.getDate() + daysUntilNext);
-        }
-        
-        while (checkDate <= twoYearsLater) {
-          const dateKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
-          if (!cancelledDates.has(dateKey)) {
-            trainingDates.add(dateKey);
-          }
-          checkDate.setDate(checkDate.getDate() + 7);
-        }
-      });
-
-      // Add manually added dates
-      addedDates.forEach((dateKey) => {
-        trainingDates.add(dateKey);
-      });
-
-      // Check each training date for conflicts
-      for (const dateKey of trainingDates) {
-        const [year, month, day] = dateKey.split('-').map(Number);
-        const checkDate = new Date(year, month - 1, day);
-        
-        // Get time for this date
-        const timeForDate = dateTimes[dateKey] || scheduleTime;
-        const startTime = timeForDate.startTime || scheduleTime.startTime || '18:00';
-        const endTime = timeForDate.endTime || scheduleTime.endTime || '19:30';
-
-        // Check against all other groups
-        for (const otherGroup of allGroups) {
-          if (otherGroup._id === groupId) continue; // Skip current group
-          
-          if (!otherGroup.trainingDays || !Array.isArray(otherGroup.trainingDays)) continue;
-          
-          const dayOfWeek = checkDate.getDay();
-          const otherGroupHasDay = otherGroup.trainingDays.includes(dayOfWeek);
-          const otherGroupHasAdded = otherGroup.addedDates && 
-            Array.isArray(otherGroup.addedDates) && 
-            otherGroup.addedDates.includes(dateKey);
-          const otherGroupCancelled = otherGroup.cancelledDates && 
-            Array.isArray(otherGroup.cancelledDates) && 
-            otherGroup.cancelledDates.includes(dateKey);
-          
-          // Check if other group has training on this exact date
-          if ((otherGroupHasDay || otherGroupHasAdded) && !otherGroupCancelled) {
-            // Get other group's time for this date
-            const otherDateTimes = otherGroup.dateTimes || {};
-            const otherTimeForDate = otherDateTimes[dateKey] || otherGroup.trainingTime || { startTime: '18:00', endTime: '19:30' };
-            const otherStartTime = otherTimeForDate.startTime || '18:00';
-            const otherEndTime = otherTimeForDate.endTime || '19:30';
-
-            // Check if times overlap (same time slot)
-            if (timeRangesOverlap(startTime, endTime, otherStartTime, otherEndTime)) {
-              conflicts.push({
-                date: `${day}/${month}/${year}`,
-                dateKey,
-                otherGroupName: otherGroup.name,
-                time: `${startTime} - ${endTime}`,
-                otherTime: `${otherStartTime} - ${otherEndTime}`,
-              });
-              break; // One conflict per date is enough
-            }
-          }
-        }
-      }
-
-      return conflicts;
-    } catch (err) {
-      console.error('Error checking conflicts:', err);
-      return [];
-    }
-  };
-
-  const handleUpdateTrainingSchedule = async () => {
-    if (trainingSchedule.trainingDays.length === 0 && addedDates.size === 0) {
-      notifications.error('Please select at least one training day or add a replacement date');
-      return;
-    }
-
-    setUpdatingSchedule(true);
-    try {
-      // Check for time conflicts before saving
-      const conflicts = await checkTimeConflicts();
-      
-      if (conflicts.length > 0) {
-        // Show conflict error
-        const conflictList = conflicts.map(c => 
-          `${c.date}: Conflict with "${c.otherGroupName}" (${c.time})`
-        ).join('\n');
-        
-        notifications.error(
-          `⚠️ Time conflict detected!\n\n${conflictList}\n\nCannot schedule training at the same time on the same date. Please adjust the schedule.`,
-          { duration: 8000 }
-        );
-        setUpdatingSchedule(false);
-        return;
-      }
-
-      // Use the default time if no per-day times are set
-      const scheduleTime = trainingSchedule.trainingTime;
-      
-      // Filter out empty dateTimes entries (where both startTime and endTime are empty)
-      const filteredDateTimes = Object.keys(dateTimes).reduce((acc, key) => {
-        const time = dateTimes[key];
-        if (time && (time.startTime || time.endTime)) {
-          // Only include if at least one time is set
-          acc[key] = {
-            startTime: time.startTime || '',
-            endTime: time.endTime || '',
-          };
-        }
-        return acc;
-      }, {});
-      
-      await apiClient.put(`/groups/${groupId}`, {
-        trainingDays: trainingSchedule.trainingDays,
-        trainingTime: scheduleTime,
-        cancelledDates: Array.from(cancelledDates),
-        addedDates: Array.from(addedDates),
-        dateTimes: Object.keys(filteredDateTimes).length > 0 ? filteredDateTimes : undefined,
-      });
-      const dayNames = trainingSchedule.trainingDays.map(
-        (d) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
-      );
-      let message = `Training schedule updated: ${dayNames.join(', ')} from ${scheduleTime.startTime} to ${scheduleTime.endTime}`;
-      if (cancelledDates.size > 0) {
-        message += `\n${cancelledDates.size} date(s) cancelled`;
-      }
-      if (addedDates.size > 0) {
-        message += `\n${addedDates.size} replacement date(s) added`;
-      }
-      notifications.success(message);
-      fetchPlayers();
-      setTrainingDays(trainingSchedule.trainingDays);
-      setTrainingTime(scheduleTime);
-      setModifiedDays(new Set());
-      setSelectedDayForTime(null);
-      setSelectedDate(null);
-      setSelectedDateForTime(null);
-      setShowScheduleConfig(false);
-    } catch (err) {
-      notifications.error(err.response?.data?.message || err.message || 'Failed to update training schedule');
-    } finally {
-      setUpdatingSchedule(false);
-    }
-  };
-
-  const handleDayRemove = (dayIndex) => {
-    const newModifiedDays = new Set(modifiedDays);
-    setTrainingSchedule((prev) => ({
-      ...prev,
-      trainingDays: prev.trainingDays.filter((d) => d !== dayIndex),
-    }));
-    setDayTimes((prev) => {
+    // "All Absent": update all players in draftStatusMap, dirty=true
+    setDraftStatusMap((prev) => {
       const updated = { ...prev };
-      delete updated[dayIndex];
+      players.forEach((player) => {
+        updated[player._id] = {
+          status: 'absent',
+          isPresent: false,
+          signature: prev[player._id]?.signature || '',
+        };
+      });
       return updated;
     });
-    newModifiedDays.add(dayIndex);
-    setModifiedDays(newModifiedDays);
-    if (selectedDayForTime === dayIndex) {
-      setSelectedDayForTime(null);
-    }
-  };
-
-  const handleDayTimeChange = (dayIndex, field, value) => {
-    setDayTimes((prev) => ({
-      ...prev,
-      [dayIndex]: {
-        ...prev[dayIndex],
-        [field]: value,
-      },
-    }));
-    const newModifiedDays = new Set(modifiedDays);
-    newModifiedDays.add(dayIndex);
-    setModifiedDays(newModifiedDays);
-  };
-
-  const handleDateTimeChange = (dateKey, field, value) => {
-    setDateTimes((prev) => {
-      const currentDateTimes = prev[dateKey] || {};
-      return {
-        ...prev,
-        [dateKey]: {
-          ...currentDateTimes,
-          [field]: value, // Allow empty string - don't merge with default
-        },
-      };
-    });
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchPlayers(), fetchAttendance(date)]);
-    setRefreshing(false);
   };
 
   const formatDate = (dateString) => {
-    // Parse date string as local date (not UTC)
     const [year, month, day] = dateString.split('-').map(Number);
     const d = new Date(year, month - 1, day);
-    const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()];
+    const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
     const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
-    return `${dayName}, ${monthName} ${d.getDate()}`;
+    return `${dayName}, ${day} ${monthName}`;
   };
 
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const navigateDate = (days) => {
+    const [year, month, day] = date.split('-').map(Number);
+    const currentDate = new Date(year, month - 1, day);
+    currentDate.setDate(currentDate.getDate() + days);
+    const newDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+    setDate(newDate);
+  };
 
-  // Generate calendar dates for current month
+  const getDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getCalendarDates = () => {
     const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
     
     const dates = [];
     const currentDate = new Date(startDate);
-    
-    // Generate 6 weeks of dates (42 days)
     for (let i = 0; i < 42; i++) {
       dates.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
     return dates;
   };
 
@@ -552,807 +276,495 @@ const AttendanceScreen = ({ route }) => {
     }
   };
 
-  const getDateKey = (date) => {
-    if (typeof date === 'string') {
-      // If it's already a string in YYYY-MM-DD format, return it
-      return date.includes('T') ? date.split('T')[0] : date;
-    }
-    // If it's a Date object, convert to YYYY-MM-DD using local timezone (not UTC)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Helper to check if current selected date is cancelled
-  const isCurrentDateCancelled = () => {
-    const dateKey = getDateKey(date);
-    return cancelledDates.has(dateKey);
-  };
-
-  // Helper to check if current selected date is added
-  const isCurrentDateAdded = () => {
-    const dateKey = getDateKey(date);
-    return addedDates.has(dateKey);
-  };
-
-  const isDateSelected = (date) => {
-    const dayOfWeek = date.getDay();
-    const dateKey = getDateKey(date);
-    
-    // Check if it's a cancelled date (exception)
-    if (cancelledDates.has(dateKey)) {
-      return false;
-    }
-    
-    // Check if it's an added date (replacement)
-    if (addedDates.has(dateKey)) {
-      return true;
-    }
-    
-    // Check if it's part of the recurring schedule
-    return trainingSchedule.trainingDays.includes(dayOfWeek);
-  };
-
-  const isDateCancelled = (date) => {
-    const dateKey = getDateKey(date);
-    return cancelledDates.has(dateKey);
-  };
-
-  const isDateAdded = (date) => {
-    const dateKey = getDateKey(date);
-    return addedDates.has(dateKey);
-  };
-
-  const isPastDate = (date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-    return checkDate < today;
-  };
-
-  const getTimeForDate = (date) => {
-    const dateKey = getDateKey(date);
-    const dayOfWeek = date.getDay();
-    
-    // 1. Check for specific date override
-    if (dateTimes[dateKey]) {
-      return dateTimes[dateKey];
-    }
-    
-    // 2. Check for day of week override
-    if (dayTimes[dayOfWeek]) {
-      return dayTimes[dayOfWeek];
-    }
-    
-    // 3. Fallback to default training time
-    return trainingSchedule.trainingTime;
-  };
-
-  const isDateModified = (date) => {
-    const dayOfWeek = date.getDay();
-    const dateKey = getDateKey(date);
-    return modifiedDays.has(dayOfWeek) || cancelledDates.has(dateKey) || addedDates.has(dateKey);
-  };
-
-  const isDateInCurrentMonth = (date) => {
-    return date.getMonth() === currentMonth;
-  };
-
-  const handleDateClick = (date) => {
-    if (!isDateInCurrentMonth(date)) return;
-    
-    const dateKey = getDateKey(date);
-    const dayOfWeek = date.getDay();
-    const isRecurringDay = trainingSchedule.trainingDays.includes(dayOfWeek);
-    const isSelected = isDateSelected(date);
-    const isCancelled = isDateCancelled(date);
-    const isAdded = isDateAdded(date);
-    
-    // Check for double tap (within 300ms)
-    const now = Date.now();
-    const isDoubleTap = lastTap.date === dateKey && (now - lastTap.time) < 300;
-    
-    if (isDoubleTap && isAdded) {
-      // Double tap on added date: Remove it and clear its custom time
-      const newAdded = new Set(addedDates);
-      newAdded.delete(dateKey);
-      setAddedDates(newAdded);
-      // Remove custom time for this date
-      setDateTimes((prev) => {
-        const updated = { ...prev };
-        delete updated[dateKey];
-        return updated;
-      });
-      setSelectedDateForTime(null);
-      setSelectedDate(null);
-      setLastTap({ date: null, time: 0 });
-    } else if (isDoubleTap && isSelected && !isCancelled && !isAdded) {
-      // Double tap on recurring training day: Cancel this specific date
-      const newCancelled = new Set(cancelledDates);
-      newCancelled.add(dateKey);
-      setCancelledDates(newCancelled);
-      setSelectedDateForTime(null);
-      setLastTap({ date: null, time: 0 });
-    } else if (isSelected && !isCancelled && !isAdded) {
-      // Single tap on training day: Select for time editing
-      setSelectedDateForTime(date);
-      setSelectedDate(date);
-      // Initialize time for this date if not set
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingSchedule.trainingTime,
-        }));
-      }
-      setLastTap({ date: dateKey, time: now });
-    } else if (isCancelled) {
-      // Single tap on cancelled date: Restore it
-      const newCancelled = new Set(cancelledDates);
-      newCancelled.delete(dateKey);
-      setCancelledDates(newCancelled);
-      setSelectedDateForTime(null);
-      setLastTap({ date: null, time: 0 });
-    } else if (isAdded) {
-      // Single tap on added date: Select for time editing
-      setSelectedDateForTime(date);
-      setSelectedDate(date);
-      // Initialize time for this date if not set
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingSchedule.trainingTime,
-        }));
-      }
-      setLastTap({ date: dateKey, time: now });
-    } else {
-      // Single tap on non-training day: Add as replacement date
-      const newAdded = new Set(addedDates);
-      newAdded.add(dateKey);
-      setAddedDates(newAdded);
-      setSelectedDateForTime(date);
-      // Initialize time for this date if not set
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingSchedule.trainingTime,
-        }));
-      }
-      setSelectedDate(date);
-      setLastTap({ date: dateKey, time: now });
+  const handleDateSelect = (selectedDate) => {
+    if (selectedDate.getMonth() === currentMonth) {
+      setDate(getDateKey(selectedDate));
+      setShowDatePicker(false);
     }
   };
+
+  const renderPlayerItem = useCallback(({ item: player }) => {
+    const status = draftStatusMap[player._id]?.status || null;
+    return (
+      <PlayerAttendanceRow
+        player={player}
+        status={status}
+        onSetStatus={handleStatusChange}
+      />
+    );
+  }, [draftStatusMap, handleStatusChange]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+    <View style={styles.screenContainer}>
+      <LinearGradient
+        colors={[colors.bgTertiary, colors.bgSecondary, colors.bgPrimary]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Attendance</Text>
-          <Text style={styles.subtitle}>Mark player attendance</Text>
+        <View style={[styles.blob, styles.blob1]} />
+        <View style={[styles.blob, styles.blob2]} />
+        <View style={[styles.blob, styles.blob3]} />
+      </LinearGradient>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Attendance</Text>
+          <Text style={styles.headerSubtitle}>{formatDate(date)}</Text>
         </View>
-
-        {/* Schedule Section */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <Text style={styles.cardTitle}>Training Schedule</Text>
-              {trainingDays.length > 0 ? (
-                <View style={styles.scheduleInfo}>
-                  <Text style={styles.scheduleDays}>
-                    📅 {trainingDays.map((d) => dayNames[d]).join(', ')}
-                  </Text>
-                  {trainingTime && (
-                    <Text style={styles.scheduleTime}>
-                      ⏰ {trainingTime.startTime || '18:00'} - {trainingTime.endTime || '19:30'}
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                <Text style={styles.noScheduleText}>
-                  ⚠️ No schedule configured. Set training days and times.
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.configButton}
-              onPress={() => setShowScheduleConfig(true)}
-            >
-              <Text style={styles.configButtonText}>⚙️ Configure</Text>
+        <View style={styles.headerRight}>
+          {dirty && (
+            <TouchableOpacity onPress={handleDiscardChanges} style={styles.discardButton}>
+              <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+              <Text style={styles.discardButtonText}>Discard</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Date Selection */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Select Date</Text>
-          <View style={styles.dateContainer}>
-            <TextInput
-              style={[
-                styles.dateInput,
-                isCurrentDateCancelled() && styles.dateInputCancelled,
-                !isCurrentDateCancelled() && isTrainingDay(date) && trainingDays.length > 0 && styles.dateInputTraining,
-              ]}
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-            />
-            {isCurrentDateCancelled() && (
-              <Text style={styles.dateWarning}>✕ This day has been cancelled</Text>
-            )}
-            {!isCurrentDateCancelled() && isCurrentDateAdded() && (
-              <Text style={styles.dateSuccess}>+ Replacement date (added)</Text>
-            )}
-            {!isCurrentDateCancelled() && !isCurrentDateAdded() && !isTrainingDay(date) && trainingDays.length > 0 && (
-              <Text style={styles.dateInfo}>ℹ️ Not a scheduled training day (attendance can still be marked)</Text>
-            )}
-            {!isCurrentDateCancelled() && !isCurrentDateAdded() && isTrainingDay(date) && trainingDays.length > 0 && (
-              <Text style={styles.dateSuccess}>✓ Scheduled training day</Text>
-            )}
-            {trainingDays.length === 0 && (
-              <Text style={styles.dateInfo}>ℹ️ You can mark attendance on any day</Text>
-            )}
-          </View>
-          <Text style={styles.dateDisplay}>{formatDate(date)}</Text>
-          <View style={styles.dateNavButtons}>
-            <>
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => navigateDate(-1)}
-              >
-                <Text style={styles.navButtonText}>← Previous</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.navButton} onPress={setDateToday}>
-                <Text style={styles.navButtonText}>Today</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => navigateDate(1)}
-              >
-                <Text style={styles.navButtonText}>Next →</Text>
-              </TouchableOpacity>
-            </>
-          </View>
-        </View>
-
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-          <StatCard label="Present" value={stats.present} accent={colors.success} />
-          <StatCard label="Absent" value={stats.absent} accent={colors.error} />
-          <StatCard label="Unmarked" value={stats.unmarked} accent={colors.textMuted} />
-          {stats.withStatus > 0 && (
-            <StatCard label="Rate" value={stats.percentage} accent={colors.warning} format="percentage" />
           )}
-        </View>
-
-        {/* Players List */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Players ({filteredPlayers.length})</Text>
-            <View style={styles.quickActions}>
-              <TouchableOpacity style={styles.quickActionButton} onPress={markAllPresent}>
-                <Text style={styles.quickActionText}>✓ All Present</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionButton} onPress={markAllAbsent}>
-                <Text style={styles.quickActionText}>✗ All Absent</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search players..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-
-          {filteredPlayers.length === 0 ? (
-            <Text style={styles.emptyText}>No players found</Text>
-          ) : (
-            <FlatList
-              data={filteredPlayers}
-              keyExtractor={(item) => item._id}
-              scrollEnabled={false}
-              renderItem={({ item: player }) => {
-                const status = attendance[player._id]?.status || '';
-                const isPresent = status === 'present';
-                const isAbsent = status === 'absent';
-                return (
-                  <View
-                    style={[
-                      styles.playerRow,
-                      isPresent && styles.playerRowPresent,
-                      isAbsent && styles.playerRowAbsent,
-                    ]}
-                  >
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName}>{player.fullName}</Text>
-                    </View>
-                    <View style={styles.playerActions}>
-                      <View style={styles.statusButtons}>
-                        <TouchableOpacity
-                          style={[
-                            styles.statusButton,
-                            isPresent && styles.statusButtonActive,
-                            isPresent && styles.statusButtonPresent,
-                          ]}
-                          onPress={() => handleStatusChange(player._id, isPresent ? '' : 'present')}
-                        >
-                          <Text
-                            style={[
-                              styles.statusButtonText,
-                              isPresent && styles.statusButtonTextActive,
-                            ]}
-                          >
-                            ✓
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.statusButton,
-                            isAbsent && styles.statusButtonActive,
-                            isAbsent && styles.statusButtonAbsent,
-                          ]}
-                          onPress={() => handleStatusChange(player._id, isAbsent ? '' : 'absent')}
-                        >
-                          <Text
-                            style={[
-                              styles.statusButtonText,
-                              isAbsent && styles.statusButtonTextActive,
-                            ]}
-                          >
-                            ✗
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput
-                        style={styles.signatureInput}
-                        placeholder="Signature"
-                        placeholderTextColor={colors.textMuted}
-                        value={attendance[player._id]?.signature || ''}
-                        onChangeText={(value) => handleSignatureChange(player._id, value)}
-                      />
-                    </View>
-                  </View>
-                );
-              }}
-            />
-          )}
-
-          <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveButtonText}>💾 Save Attendance</Text>
-            )}
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.calendarButton}>
+            <Ionicons name="calendar-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
 
-      {/* Schedule Configuration Modal */}
+      {/* Status Summary Cards */}
+      <View style={styles.statusSummary}>
+        <View style={[styles.statCard, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+          <Text style={styles.statValue}>{stats.present}</Text>
+          <Text style={styles.statLabel}>Present</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.error + '15', borderColor: colors.error + '40' }]}>
+          <Ionicons name="close-circle" size={24} color={colors.error} />
+          <Text style={styles.statValue}>{stats.absent}</Text>
+          <Text style={styles.statLabel}>Absent</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.warning + '15', borderColor: colors.warning + '40' }]}>
+          <Ionicons name="time" size={24} color={colors.warning} />
+          <Text style={styles.statValue}>{stats.late}</Text>
+          <Text style={styles.statLabel}>Late</Text>
+        </View>
+      </View>
+
+      {/* Filters and Search */}
+      <View style={styles.filtersSection}>
+        <View style={styles.filterChips}>
+          {['all', 'unmarked', 'present', 'absent', 'late'].map((filter) => (
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterChip,
+                statusFilter === filter && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter(filter)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  statusFilter === filter && styles.filterChipTextActive,
+                ]}
+              >
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <AppInput
+          placeholder="Search players..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          leftIcon={<Ionicons name="search" size={20} color={colors.textMuted} />}
+          style={styles.searchInput}
+        />
+      </View>
+
+      {/* Players List */}
+      <FlatList
+        data={filteredPlayers}
+        keyExtractor={(item) => item._id}
+        renderItem={renderPlayerItem}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews={true}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No players found</Text>
+          </View>
+        }
+        refreshing={refreshing}
+        onRefresh={async () => {
+          setRefreshing(true);
+          await Promise.all([fetchPlayers(), fetchAttendance(date)]);
+          setRefreshing(false);
+        }}
+      />
+
+      {/* Bottom Action Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <TouchableOpacity
+          style={styles.bottomBarButton}
+          onPress={markAllPresent}
+        >
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          <Text style={styles.bottomBarButtonText}>All Present</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bottomBarButton}
+          onPress={markAllAbsent}
+        >
+          <Ionicons name="close-circle" size={20} color={colors.error} />
+          <Text style={styles.bottomBarButtonText}>All Absent</Text>
+        </TouchableOpacity>
+        <AppButton
+          variant="primary"
+          title="Save"
+          onPress={handleSave}
+          loading={saving}
+          disabled={!dirty || saving}
+          style={styles.saveButton}
+        />
+      </View>
+
+      {/* Date Picker Modal */}
       <Modal
-        visible={showScheduleConfig}
+        visible={showDatePicker}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowScheduleConfig(false)}
+        onRequestClose={() => setShowDatePicker(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>📅 Configure Training Schedule</Text>
-              <TouchableOpacity onPress={() => setShowScheduleConfig(false)}>
-                <Text style={styles.modalClose}>✕</Text>
+              <Text style={styles.modalTitle}>Select Date</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.modalScroll}>
-              <Text style={styles.modalSubtitle}>
-                Select recurring training days below. Then use calendar to cancel specific dates or add replacements.
-              </Text>
-
-              {/* Day of Week Selector */}
-              <View style={styles.dayOfWeekSelector}>
-                <View style={styles.selectorHeader}>
-                  <View style={styles.selectorIconContainer}>
-                    <Text style={styles.selectorIcon}>📅</Text>
-                  </View>
-                  <View style={styles.selectorHeaderText}>
-                    <Text style={styles.selectorTitle}>Recurring Training Days</Text>
-                    <Text style={styles.selectorSubtitle}>
-                      Select days that repeat every week
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.dayOfWeekGrid}>
-                  {dayNames.map((day, index) => {
-                    const isSelected = trainingSchedule.trainingDays.includes(index);
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dayOfWeekButton,
-                          isSelected && styles.dayOfWeekButtonSelected,
-                        ]}
-                        onPress={() => {
-                          if (isSelected) {
-                            // Remove from recurring schedule
-                            setTrainingSchedule((prev) => ({
-                              ...prev,
-                              trainingDays: prev.trainingDays.filter((d) => d !== index),
-                            }));
-                            setDayTimes((prev) => {
-                              const updated = { ...prev };
-                              delete updated[index];
-                              return updated;
-                            });
-                            const newModifiedDays = new Set(modifiedDays);
-                            newModifiedDays.add(index);
-                            setModifiedDays(newModifiedDays);
-                            if (selectedDayForTime === index) {
-                              setSelectedDayForTime(null);
-                            }
-                          } else {
-                            // Add to recurring schedule
-                            setTrainingSchedule((prev) => ({
-                              ...prev,
-                              trainingDays: [...prev.trainingDays, index].sort((a, b) => a - b),
-                            }));
-                            setDayTimes((prev) => ({
-                              ...prev,
-                              [index]: trainingSchedule.trainingTime,
-                            }));
-                            const newModifiedDays = new Set(modifiedDays);
-                            newModifiedDays.add(index);
-                            setModifiedDays(newModifiedDays);
-                          }
-                        }}
-                        activeOpacity={0.6}
-                      >
-                        {isSelected && <View style={styles.dayOfWeekGlow} />}
-                        <Text
-                          style={[
-                            styles.dayOfWeekButtonText,
-                            isSelected && styles.dayOfWeekButtonTextSelected,
-                          ]}
-                        >
-                          {dayShortNames[index]}
-                        </Text>
-                        {isSelected && (
-                          <View style={styles.dayOfWeekCheckmarkContainer}>
-                            <Text style={styles.dayOfWeekCheckmark}>✓</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                {trainingSchedule.trainingDays.length > 0 && (
-                  <View style={styles.selectedDaysPreview}>
-                    <Text style={styles.selectedDaysPreviewText}>
-                      ✓ {trainingSchedule.trainingDays.length} day{trainingSchedule.trainingDays.length > 1 ? 's' : ''} selected: {trainingSchedule.trainingDays.map((d) => dayNames[d]).join(', ')}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Month/Year Navigation */}
+            <View style={styles.calendarContainer}>
               <View style={styles.monthNavigation}>
-                <TouchableOpacity
-                  style={styles.monthNavButton}
-                  onPress={() => navigateMonth('prev')}
-                >
-                  <Text style={styles.monthNavButtonText}>←</Text>
+                <TouchableOpacity onPress={() => navigateMonth('prev')}>
+                  <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <View style={styles.monthYearContainer}>
-                  <Text style={styles.monthYearText}>
-                    {monthNames[currentMonth]} {currentYear}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.monthNavButton}
-                  onPress={() => navigateMonth('next')}
-                >
-                  <Text style={styles.monthNavButtonText}>→</Text>
+                <Text style={styles.monthYearText}>
+                  {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][currentMonth]} {currentYear}
+                </Text>
+                <TouchableOpacity onPress={() => navigateMonth('next')}>
+                  <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
               </View>
-
-              {/* Full Calendar Grid */}
-              <View style={styles.calendarContainer}>
-                {/* Day Headers */}
-                <View style={styles.calendarHeader}>
-                  {dayShortNames.map((day, index) => (
-                    <View key={index} style={styles.calendarHeaderCell}>
-                      <Text style={styles.calendarHeaderText}>{day}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Calendar Dates */}
-                <View style={styles.calendarGrid}>
-                  {getCalendarDates().map((date, index) => {
-                    const dayOfWeek = date.getDay();
-                    const isSelected = isDateSelected(date);
-                    const isCancelled = isDateCancelled(date);
-                    const isAdded = isDateAdded(date);
-                    const isModified = isDateModified(date);
-                    const isCurrentMonth = isDateInCurrentMonth(date);
-                    const dateNumber = date.getDate();
-                    const dateKey = getDateKey(date);
-                    const isTimeSelected = selectedDayForTime === dayOfWeek && isSelected;
-                    const isThisDateSelected = selectedDate && getDateKey(selectedDate) === dateKey;
-                    const isThisDateForTime = selectedDateForTime && getDateKey(selectedDateForTime) === dateKey;
-                    const isPast = isPastDate(date);
-                    
-                    return (
-                      <View key={index} style={styles.calendarCell}>
-                        <TouchableOpacity
-                          style={[
-                            styles.calendarDayButton,
-                            !isCurrentMonth && styles.calendarDayButtonOtherMonth,
-                            isSelected && isCurrentMonth && !isCancelled && styles.calendarDayButtonSelected,
-                            isCancelled && isCurrentMonth && styles.calendarDayButtonCancelled,
-                            isAdded && isCurrentMonth && styles.calendarDayButtonAdded,
-                            isTimeSelected && styles.calendarDayButtonActive,
-                            isThisDateSelected && styles.calendarDayButtonSelectedDate,
-                            isThisDateForTime && styles.calendarDayButtonTimeSelected,
-                          ]}
-                          onPress={() => {
-                            if (isCurrentMonth) {
-                              if (isPast && isSelected) {
-                                // For past dates, just show time (read-only)
-                                setSelectedDateForTime(date);
-                              } else {
-                                // Handle clicks on all dates (including cancelled ones)
-                                handleDateClick(date);
-                              }
-                            }
-                          }}
-                          activeOpacity={0.7}
-                          disabled={!isCurrentMonth}
-                        >
-                          <Text
-                            style={[
-                              styles.calendarDayText,
-                              !isCurrentMonth && styles.calendarDayTextOtherMonth,
-                              isSelected && isCurrentMonth && !isCancelled && styles.calendarDayTextSelected,
-                              isCancelled && isCurrentMonth && styles.calendarDayTextCancelled,
-                              isAdded && isCurrentMonth && styles.calendarDayTextAdded,
-                            ]}
-                          >
-                            {dateNumber}
-                          </Text>
-                          {isCancelled && isCurrentMonth && (
-                            <View style={styles.cancelledIndicator}>
-                              <Text style={styles.cancelledIndicatorText}>✕</Text>
-                            </View>
-                          )}
-                          {isAdded && isCurrentMonth && (
-                            <View style={styles.addedIndicator}>
-                              <Text style={styles.addedIndicatorText}>+</Text>
-                            </View>
-                          )}
-                          {isModified && !isCancelled && !isAdded && isCurrentMonth && (
-                            <View style={styles.modifiedIndicator} />
-                          )}
-                          {isPast && isSelected && isCurrentMonth && !isCancelled && (
-                            <View style={styles.pastDateIndicator}>
-                              <Text style={styles.pastDateIndicatorText}>-</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Time Inputs for Selected Specific Date */}
-              {selectedDateForTime && (
-                <View style={styles.dayTimeContainer}>
-                  <View style={styles.dayTimeHeader}>
-                    <Text style={styles.dayTimeTitle}>
-                      Time for {monthNames[selectedDateForTime.getMonth()]} {selectedDateForTime.getDate()}, {selectedDateForTime.getFullYear()}
-                      {isPastDate(selectedDateForTime) && <Text style={styles.pastDateLabel}> (Past)</Text>}
-                    </Text>
-                    {!isPastDate(selectedDateForTime) && (
-                      <TouchableOpacity
-                        style={styles.removeDayButton}
-                        onPress={() => {
-                          const dateKey = getDateKey(selectedDateForTime);
-                          setDateTimes((prev) => {
-                            const updated = { ...prev };
-                            delete updated[dateKey];
-                            return updated;
-                          });
-                          setSelectedDateForTime(null);
-                        }}
-                      >
-                        <Text style={styles.removeDayButtonText}>Clear</Text>
-                      </TouchableOpacity>
-                    )}
+              <View style={styles.calendarGrid}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <View key={day} style={styles.calendarHeaderCell}>
+                    <Text style={styles.calendarHeaderText}>{day}</Text>
                   </View>
-                  <View style={styles.timeContainer}>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>Start Time</Text>
-                      {isPastDate(selectedDateForTime) ? (
-                        <View style={styles.timeDisplay}>
-                          <Text style={styles.timeDisplayTextPast}>
-                            {getTimeForDate(selectedDateForTime)?.startTime || '18:00'}
-                          </Text>
-                        </View>
-                      ) : (
-                        <TextInput
-                          style={styles.timeInput}
-                          value={dateTimes[getDateKey(selectedDateForTime)]?.startTime ?? ''}
-                          onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'startTime', value)}
-                          placeholder="18:00"
-                          placeholderTextColor={colors.textMuted}
-                          keyboardType="default"
-                        />
-                      )}
-                    </View>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>End Time</Text>
-                      {isPastDate(selectedDateForTime) ? (
-                        <View style={styles.timeDisplay}>
-                          <Text style={styles.timeDisplayTextPast}>
-                            {getTimeForDate(selectedDateForTime)?.endTime || '19:30'}
-                          </Text>
-                        </View>
-                      ) : (
-                        <TextInput
-                          style={styles.timeInput}
-                          value={dateTimes[getDateKey(selectedDateForTime)]?.endTime ?? ''}
-                          onChangeText={(value) => handleDateTimeChange(getDateKey(selectedDateForTime), 'endTime', value)}
-                          placeholder="19:30"
-                          placeholderTextColor={colors.textMuted}
-                          keyboardType="default"
-                        />
-                      )}
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Time Inputs for Selected Day of Week (fallback) */}
-              {selectedDayForTime !== null && trainingSchedule.trainingDays.includes(selectedDayForTime) && !selectedDateForTime && (
-                <View style={styles.dayTimeContainer}>
-                  <View style={styles.dayTimeHeader}>
-                    <Text style={styles.dayTimeTitle}>
-                      Time for {dayNames[selectedDayForTime]}
-                    </Text>
+                ))}
+                {getCalendarDates().map((dateItem, index) => {
+                  const isCurrentMonth = dateItem.getMonth() === currentMonth;
+                  const isSelected = getDateKey(dateItem) === date;
+                  return (
                     <TouchableOpacity
-                      style={styles.removeDayButton}
-                      onPress={() => handleDayRemove(selectedDayForTime)}
+                      key={index}
+                      style={[
+                        styles.calendarCell,
+                        !isCurrentMonth && styles.calendarCellOtherMonth,
+                        isSelected && styles.calendarCellSelected,
+                      ]}
+                      onPress={() => handleDateSelect(dateItem)}
+                      disabled={!isCurrentMonth}
                     >
-                      <Text style={styles.removeDayButtonText}>Remove</Text>
+                      <Text
+                        style={[
+                          styles.calendarCellText,
+                          !isCurrentMonth && styles.calendarCellTextOtherMonth,
+                          isSelected && styles.calendarCellTextSelected,
+                        ]}
+                      >
+                        {dateItem.getDate()}
+                      </Text>
                     </TouchableOpacity>
-                  </View>
-                  <View style={styles.timeContainer}>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>Start Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={dayTimes[selectedDayForTime]?.startTime || trainingSchedule.trainingTime.startTime}
-                        onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'startTime', value)}
-                        placeholder="18:00"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="default"
-                      />
-                    </View>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>End Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={dayTimes[selectedDayForTime]?.endTime || trainingSchedule.trainingTime.endTime}
-                        onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'endTime', value)}
-                        placeholder="19:30"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="default"
-                      />
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Default Time (shown when no day is selected for time editing) */}
-              {selectedDayForTime === null && trainingSchedule.trainingDays.length > 0 && (
-                <View style={styles.dayTimeContainer}>
-                  <Text style={styles.dayTimeTitle}>Default Session Time</Text>
-                  <Text style={styles.dayTimeSubtitle}>
-                    Tap on a selected day above to set custom time for that day
-                  </Text>
-                  <View style={styles.timeContainer}>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>Start Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={trainingSchedule.trainingTime.startTime}
-                        onChangeText={(value) => {
-                          setTrainingSchedule((prev) => ({
-                            ...prev,
-                            trainingTime: { ...prev.trainingTime, startTime: value },
-                          }));
-                        }}
-                        placeholder="18:00"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="default"
-                      />
-                    </View>
-                    <View style={styles.timeInputGroup}>
-                      <Text style={styles.timeLabel}>End Time</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={trainingSchedule.trainingTime.endTime}
-                        onChangeText={(value) => {
-                          setTrainingSchedule((prev) => ({
-                            ...prev,
-                            trainingTime: { ...prev.trainingTime, endTime: value },
-                          }));
-                        }}
-                        placeholder="19:30"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="default"
-                      />
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Summary */}
-              <View style={styles.scheduleSummary}>
-                {trainingSchedule.trainingDays.length > 0 && (
-                  <Text style={styles.selectedDaysText}>
-                    ✓ Recurring: {trainingSchedule.trainingDays.map((d) => dayShortNames[d]).join(', ')}
-                  </Text>
-                )}
-                {cancelledDates.size > 0 && (
-                  <Text style={styles.cancelledDaysText}>
-                    ✕ Cancelled: {cancelledDates.size} date(s)
-                  </Text>
-                )}
-                {addedDates.size > 0 && (
-                  <Text style={styles.addedDaysText}>
-                    + Added: {addedDates.size} replacement date(s)
-                  </Text>
-                )}
+                  );
+                })}
               </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.modalSaveButton,
-                  (updatingSchedule || trainingSchedule.trainingDays.length === 0) &&
-                    styles.modalSaveButtonDisabled,
-                ]}
-                onPress={handleUpdateTrainingSchedule}
-                disabled={updatingSchedule || trainingSchedule.trainingDays.length === 0}
-              >
-                {updatingSchedule ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.modalSaveButtonText}>💾 Save Schedule</Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>
+      </SafeAreaView>
     </View>
   );
 };
 
+const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  blob: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.08,
+  },
+  blob1: {
+    width: 300,
+    height: 300,
+    top: -100,
+    right: -100,
+    backgroundColor: colors.primary,
+  },
+  blob2: {
+    width: 200,
+    height: 200,
+    bottom: -50,
+    left: -50,
+    backgroundColor: colors.accent,
+  },
+  blob3: {
+    width: 150,
+    height: 150,
+    top: '40%',
+    right: '20%',
+    backgroundColor: colors.secondary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  backButton: {
+    padding: spacing.sm,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  headerSubtitle: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  discardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.error + '15',
+    gap: spacing.xs,
+  },
+  discardButtonText: {
+    ...typography.caption,
+    color: colors.error,
+    fontWeight: '600',
+  },
+  calendarButton: {
+    padding: spacing.sm,
+  },
+  statusSummary: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.xs,
+  },
+  statValue: {
+    ...typography.h2,
+    fontWeight: '700',
+  },
+  statLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  filtersSection: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  filterChips: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: colors.primary,
+  },
+  searchInput: {
+    marginBottom: 0,
+  },
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 100, // Space for bottom bar
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl * 2,
+    gap: spacing.md,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textMuted,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    backgroundColor: colors.bgSecondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  bottomBarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+    minHeight: 56,
+  },
+  bottomBarButtonText: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  saveButton: {
+    flex: 1,
+    minHeight: 56,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.bgSecondary,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingBottom: spacing.xl,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.h2,
+  },
+  calendarContainer: {
+    padding: spacing.lg,
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  monthYearText: {
+    ...typography.h3,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarHeaderCell: {
+    width: '14.28%',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  calendarHeaderText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  calendarCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  calendarCellOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarCellSelected: {
+    backgroundColor: colors.primary + '20',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  calendarCellText: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  calendarCellTextOtherMonth: {
+    color: colors.textMuted,
+  },
+  calendarCellTextSelected: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+});
 
 export default AttendanceScreen;

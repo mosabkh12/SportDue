@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import apiClient from '../../services/apiClient';
+import { AppScreen } from '../../ui/components';
 import { styles } from '../../styles/screens/AdminProfileScreen.styles';
 import { colors } from '../../styles/theme';
 
@@ -76,14 +77,17 @@ const AdminProfileScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <AppScreen>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </AppScreen>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <AppScreen>
+      <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile & Security</Text>
       </View>
@@ -143,6 +147,7 @@ const AdminProfileScreen = () => {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </AppScreen>
   );
 };
 

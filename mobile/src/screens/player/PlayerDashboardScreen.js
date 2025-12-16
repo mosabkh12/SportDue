@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../services/apiClient';
 import StatCard from '../../components/StatCard';
+import { AppScreen } from '../../ui/components';
 import { styles } from '../../styles/screens/PlayerDashboardScreen.styles';
 import { colors } from '../../styles/theme';
 
@@ -224,16 +225,17 @@ const PlayerDashboardScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Player Portal</Text>
-        <Text style={styles.logoutText} onPress={logout}>Logout</Text>
-      </View>
+    <AppScreen>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Player Portal</Text>
+          <Text style={styles.logoutText} onPress={logout}>Logout</Text>
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
         {loading && !player ? (
           <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
         ) : error && !player ? (
@@ -599,8 +601,9 @@ const PlayerDashboardScreen = () => {
             )}
           </>
         ) : null}
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </AppScreen>
   );
 };
 
