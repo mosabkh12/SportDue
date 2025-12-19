@@ -122,7 +122,7 @@ const CoachNavigator = () => {
       <Stack.Screen 
         name="PlayerDetails" 
         component={PlayerDetailsScreen}
-        options={{ title: 'Player Details' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="Attendance" 

@@ -84,55 +84,56 @@ export const radius = {
 
 /**
  * Typography scale
+ * Using direct color values to avoid reference issues
  */
 export const typography = {
   h1: {
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 36,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   h2: {
     fontSize: 22,
     fontWeight: '700',
     lineHeight: 28,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   h3: {
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 24,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   h4: {
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   body: {
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   bodySmall: {
     fontSize: 13,
     fontWeight: '400',
     lineHeight: 18,
-    color: colors.textPrimary,
+    color: '#ffffff', // colors.textPrimary
   },
   caption: {
     fontSize: 12,
     fontWeight: '400',
     lineHeight: 16,
-    color: colors.textMuted,
+    color: '#9ca3af', // colors.textMuted
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
-    color: colors.textSecondary,
+    color: '#e5e7eb', // colors.textSecondary
   },
 };
 

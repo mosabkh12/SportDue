@@ -12,20 +12,23 @@ import { colors, alpha } from '../tokens';
  */
 const AppBackground = ({
   children,
-  gradientColors = [colors.bgTertiary, colors.bgSecondary, colors.bgPrimary],
+  gradientColors,
   style,
 }) => {
+  // Use default gradient colors if not provided (moved inside function to avoid module load issue)
+  const defaultGradientColors = gradientColors || [colors.bgTertiary, colors.bgSecondary, colors.bgPrimary];
   return (
     <LinearGradient
-      colors={gradientColors}
+      colors={defaultGradientColors}
       style={[styles.container, style]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
+      pointerEvents="box-none"
     >
       {/* Soft blob effects */}
-      <View style={[styles.blob, styles.blob1]} />
-      <View style={[styles.blob, styles.blob2]} />
-      <View style={[styles.blob, styles.blob3]} />
+      <View style={[styles.blob, styles.blob1]} pointerEvents="none" />
+      <View style={[styles.blob, styles.blob2]} pointerEvents="none" />
+      <View style={[styles.blob, styles.blob3]} pointerEvents="none" />
       
       <View style={styles.content}>
         {children}
@@ -42,11 +45,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     zIndex: 1,
+    position: 'relative',
   },
   blob: {
     position: 'absolute',
     borderRadius: 999,
     opacity: 0.1,
+    zIndex: 0,
   },
   blob1: {
     width: 300,

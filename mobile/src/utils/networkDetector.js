@@ -61,33 +61,56 @@ const getNetworkBase = (deviceIP) => {
   return null;
 };
 
-// Test if an IP can reach the backend server
-const testIPConnection = async (ip, silent = false, timeout = 300) => {
-  try {
-    const url = `http://${ip}:${DEFAULT_PORT}/health`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    
-    clearTimeout(timeoutId);
-    if (response.ok) {
-      if (!silent) {
-        console.log(`✅ [IP Detection] Connected to server at ${ip}:${DEFAULT_PORT}`);
-        hasLoggedConnection = true;
+// Test if an IP can reach the backend server (with retry for slower devices)
+const testIPConnection = async (ip, silent = false, timeout = 1000, retries = 1, showDetails = false) => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const url = `http://${ip}:${DEFAULT_PORT}/health`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      if (showDetails && !silent) {
+        console.log(`  🔍 Testing ${ip}:${DEFAULT_PORT}...`);
       }
-      return true;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+        // Add cache control to prevent caching issues
+        cache: 'no-store',
+      });
+      
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        if (!silent) {
+          console.log(`✅ [IP Detection] Connected to server at ${ip}:${DEFAULT_PORT}`);
+          hasLoggedConnection = true;
+        }
+        return true;
+      }
+      if (showDetails && !silent) {
+        console.log(`  ❌ ${ip}:${DEFAULT_PORT} returned status ${response.status}`);
+      }
+      return false;
+    } catch (error) {
+      // If it's a timeout and we have retries left, try again with longer timeout
+      if (error.name === 'AbortError' && attempt < retries) {
+        // Retry with slightly longer timeout
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+      // Log errors when showing details
+      if (showDetails && !silent) {
+        const errorMsg = error.name === 'AbortError' ? 'timeout' : error.message;
+        console.log(`  ❌ ${ip}:${DEFAULT_PORT} failed: ${errorMsg}`);
+      }
+      return false;
     }
-    return false;
-  } catch (error) {
-    return false;
   }
+  return false;
 };
 
 // Get IPs to test based on device's network - optimized for speed
@@ -117,9 +140,9 @@ const getIPsToTest = async () => {
     // Test router IP first (usually .1)
     ips.push(`${networkBase}.1`);
     
-    // Test IPs close to device IP (most likely to be on same network)
+    // Test IPs close to device IP first (most likely to be on same network)
     const nearbyIPs = [];
-    for (let offset = 1; offset <= 10; offset++) {
+    for (let offset = 1; offset <= 20; offset++) {
       // Test IPs before and after device IP
       const before = deviceLastOctet - offset;
       const after = deviceLastOctet + offset;
@@ -135,8 +158,14 @@ const getIPsToTest = async () => {
       }
     }
     
-    // Then test common server IPs in the same network
-    const commonLastOctets = [2, 10, 20, 50, 100, 101, 102, 200];
+    // Then test common server IPs in the same network (including wider ranges)
+    // This catches servers that might be further from device IP
+    const commonLastOctets = [
+      2, 10, 20, 50, 
+      100, 101, 102, 103, 104, 105,
+      140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
+      200, 201, 202
+    ];
     for (const lastOctet of commonLastOctets) {
       const ip = `${networkBase}.${lastOctet}`;
       if (ip !== deviceIP && !ips.includes(ip)) {
@@ -172,13 +201,23 @@ const detectServerIP = async (showLogs = false) => {
     if (showLogs) console.log(`🔍 [IP Detection] Starting fast IP detection...`);
     const startTime = Date.now();
     
-    const ipsToTest = await getIPsToTest();
-    if (showLogs) console.log(`📡 [IP Detection] Testing ${ipsToTest.length} IPs (priority: ${Math.min(10, ipsToTest.length)})`);
+    // Log device IP for debugging
+    const deviceIP = await getDeviceIP();
+    if (showLogs && deviceIP) {
+      console.log(`📱 [IP Detection] Device IP: ${deviceIP}`);
+      console.log(`🌐 [IP Detection] Network type: ${networkState.type}`);
+    }
     
-    // Test first 10 IPs in parallel (most likely ones) with very fast timeout
+    const ipsToTest = await getIPsToTest();
+    if (showLogs) {
+      console.log(`📡 [IP Detection] Testing ${ipsToTest.length} IPs (priority: ${Math.min(10, ipsToTest.length)})`);
+      console.log(`📋 [IP Detection] Priority IPs: ${ipsToTest.slice(0, 10).join(', ')}`);
+    }
+    
+    // Test first 10 IPs in parallel (most likely ones) with reasonable timeout
     const priorityIPs = ipsToTest.slice(0, 10);
     const priorityResults = await Promise.allSettled(
-      priorityIPs.map(ip => testIPConnection(ip, !showLogs, 250).then(works => ({ ip, works })))
+      priorityIPs.map(ip => testIPConnection(ip, !showLogs, 1000, 1, showLogs).then(works => ({ ip, works })))
     );
     
     for (const result of priorityResults) {
@@ -193,9 +232,12 @@ const detectServerIP = async (showLogs = false) => {
     // If priority IPs didn't work, test next batch in parallel
     const nextBatch = ipsToTest.slice(10, 20);
     if (nextBatch.length > 0) {
-      if (showLogs) console.log(`🔍 [IP Detection] Testing next batch (${nextBatch.length} IPs)...`);
+      if (showLogs) {
+        console.log(`🔍 [IP Detection] Testing next batch (${nextBatch.length} IPs)...`);
+        console.log(`📋 [IP Detection] Next batch IPs: ${nextBatch.join(', ')}`);
+      }
       const nextResults = await Promise.allSettled(
-        nextBatch.map(ip => testIPConnection(ip, !showLogs, 300).then(works => ({ ip, works })))
+        nextBatch.map(ip => testIPConnection(ip, !showLogs, 1200, 1, showLogs).then(works => ({ ip, works })))
       );
       
       for (const result of nextResults) {
@@ -215,8 +257,11 @@ const detectServerIP = async (showLogs = false) => {
       const batchSize = 10;
       for (let i = 0; i < remainingIPs.length; i += batchSize) {
         const batch = remainingIPs.slice(i, i + batchSize);
+        if (showLogs) {
+          console.log(`📋 [IP Detection] Testing batch: ${batch.join(', ')}`);
+        }
         const results = await Promise.allSettled(
-          batch.map(ip => testIPConnection(ip, !showLogs, 400).then(works => ({ ip, works })))
+          batch.map(ip => testIPConnection(ip, !showLogs, 1500, 1, showLogs).then(works => ({ ip, works })))
         );
         
         for (const result of results) {
@@ -231,7 +276,22 @@ const detectServerIP = async (showLogs = false) => {
     }
     
     const elapsed = Date.now() - startTime;
-    if (showLogs) console.log(`❌ [IP Detection] No server found after ${elapsed}ms`);
+    if (showLogs) {
+      console.log(`❌ [IP Detection] No server found after ${elapsed}ms`);
+      console.log(`💡 [IP Detection] Troubleshooting:`);
+      console.log(`   1. Make sure the server is running: npm run dev (in server folder)`);
+      console.log(`   2. Check server is listening on port ${DEFAULT_PORT}`);
+      console.log(`   3. Verify phone and computer are on the same WiFi network`);
+      console.log(`   4. Check firewall isn't blocking port ${DEFAULT_PORT}`);
+      console.log(`   5. Try manually entering server IP in app settings (if available)`);
+      if (deviceIP) {
+        const networkBase = getNetworkBase(deviceIP);
+        if (networkBase) {
+          console.log(`   6. Your device is on ${networkBase}.x network`);
+          console.log(`   7. Server should be on same network (${networkBase}.x)`);
+        }
+      }
+    }
     return null;
   } catch (error) {
     if (showLogs) console.log(`❌ [IP Detection] Error: ${error.message}`);
@@ -270,7 +330,7 @@ export const getServerIP = async (silent = false, forceRefresh = false) => {
       
       if (networkIPs[networkId]) {
         const storedIP = networkIPs[networkId];
-        const isWorking = await testIPConnection(storedIP, silent, 200);
+        const isWorking = await testIPConnection(storedIP, silent, 1000);
         if (isWorking) {
           if (currentIP !== storedIP) {
             console.log(`✅ [IP Detection] Using cached IP for network: ${storedIP}:${DEFAULT_PORT}`);
@@ -285,7 +345,7 @@ export const getServerIP = async (silent = false, forceRefresh = false) => {
       // Also try general stored IP
       const generalStoredIP = await AsyncStorage.getItem(STORAGE_KEY);
       if (generalStoredIP && generalStoredIP !== networkIPs[networkId]) {
-        const isWorking = await testIPConnection(generalStoredIP, silent, 200);
+        const isWorking = await testIPConnection(generalStoredIP, silent, 1000);
         if (isWorking) {
           // Save it for this network
           networkIPs[networkId] = generalStoredIP;
@@ -404,7 +464,7 @@ export const startNetworkMonitoring = async () => {
           isDetecting = false;
         } else if (currentIP) {
           // Same network, verify IP still works (quick check)
-          const stillWorks = await testIPConnection(currentIP, true, 200);
+          const stillWorks = await testIPConnection(currentIP, true, 1000);
           if (!stillWorks) {
             isDetecting = true;
             console.log(`\n⚠️ [Network Change] Current IP ${currentIP} is not responding, detecting new IP...\n`);

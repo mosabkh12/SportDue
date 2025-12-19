@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../ui/tokens';
 
-const StatCard = ({ label, value, accent = colors.primary, format }) => {
+const StatCard = ({ label, value, accent, format }) => {
+  // Use default accent color if not provided
+  const accentColor = accent || colors.primary;
   // Handle undefined, null, or NaN values - always show a number
   const numValue = typeof value === 'string' && value.startsWith('$') 
     ? parseFloat(value.replace('$', '')) 
@@ -24,9 +26,9 @@ const StatCard = ({ label, value, accent = colors.primary, format }) => {
   
   return (
     <View style={styles.card}>
-      <View style={[styles.chip, { backgroundColor: accent }]} />
+      <View style={[styles.chip, { backgroundColor: accentColor }]} />
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, { color: accent }]}>{formattedValue}</Text>
+      <Text style={[styles.value, { color: accentColor }]}>{formattedValue}</Text>
     </View>
   );
 };

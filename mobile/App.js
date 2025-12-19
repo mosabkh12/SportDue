@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import NotificationContainer from './src/components/NotificationContainer';
 
 const AppContent = () => {
   const navigationRef = useRef(null);
@@ -100,7 +99,6 @@ const AppContent = () => {
   return (
     <NavigationContainer ref={navigationRef}>
       <AppNavigator />
-      <NotificationContainer />
     </NavigationContainer>
   );
 };

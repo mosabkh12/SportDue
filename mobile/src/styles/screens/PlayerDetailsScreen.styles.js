@@ -1,22 +1,14 @@
-import { StyleSheet } from 'react-native';
-import { colors, spacing, typography, shadows } from '../theme';
+import { StyleSheet, Platform } from 'react-native';
+import { colors, spacing, radius, typography, shadow, alpha } from '../../ui/tokens';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bgPrimary,
   },
   loadingText: {
     color: colors.textMuted,
@@ -27,7 +19,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bgPrimary,
     padding: spacing.lg,
   },
   errorText: {
@@ -40,182 +31,276 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderRadius: 8,
+    borderRadius: radius.sm,
   },
   retryButtonText: {
     color: colors.textPrimary,
     fontWeight: '600',
   },
-  backButton: {
-    marginBottom: spacing.md,
-  },
-  backButtonText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    ...typography.h1,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.caption,
-    marginBottom: spacing.lg,
-  },
-  card: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: 16,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.md,
-  },
-  cardHeader: {
+  // Header Row
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  cardTitle: {
-    ...typography.h3,
-    flex: 1,
-  },
-  cardSubtitle: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-  },
-  editButton: {
-    backgroundColor: colors.bgTertiary,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingBottom: spacing.sm,
+    minHeight: 56,
   },
-  editButtonText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  editForm: {
-    marginTop: spacing.md,
-  },
-  inputContainer: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: colors.bgTertiary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: spacing.md,
-    color: colors.textPrimary,
-    fontSize: 16,
-  },
-  dateInputButton: {
-    backgroundColor: colors.bgTertiary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: spacing.md,
-    minHeight: 50,
+  headerBackBtn: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
   },
-  dateInputButtonText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-  },
-  dateInputButtonTextPlaceholder: {
-    color: colors.textMuted,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  helpText: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-    fontSize: 12,
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  button: {
+  headerTitle: {
+    ...typography.h2,
     flex: 1,
-    paddingVertical: spacing.md,
+    fontWeight: '700',
+  },
+  headerMoreBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Profile Card
+  profileCard: {
+    backgroundColor: colors.bgSecondary,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  profileCardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  profileAvatarText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  profileInfo: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  profileName: {
+    ...typography.h3,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  profileContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: 2,
+  },
+  profileContactText: {
+    ...typography.body,
+    fontSize: 12,
+    color: colors.textMuted,
+    flex: 1,
+  },
+  activePill: {
+    backgroundColor: alpha(colors.success, 0.15),
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: alpha(colors.success, 0.3),
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  activePillText: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.success,
+  },
+  profileChipsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  profileChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     borderRadius: 8,
+    backgroundColor: alpha(colors.textMuted, 0.1),
+    borderWidth: 1,
+    borderColor: alpha(colors.textMuted, 0.2),
+  },
+  profileChipPaid: {
+    backgroundColor: alpha(colors.success, 0.15),
+    borderColor: alpha(colors.success, 0.3),
+  },
+  profileChipLate: {
+    backgroundColor: alpha(colors.error, 0.15),
+    borderColor: alpha(colors.error, 0.3),
+  },
+  profileChipUnpaid: {
+    backgroundColor: alpha(colors.warning, 0.15),
+    borderColor: alpha(colors.warning, 0.3),
+  },
+  profileChipText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  profileChipTextPaid: {
+    color: colors.success,
+  },
+  profileChipTextLate: {
+    color: colors.error,
+  },
+  profileChipTextUnpaid: {
+    color: colors.warning,
+  },
+  statusTag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+  statusTagPaid: {
+    backgroundColor: alpha(colors.success, 0.15),
+    borderColor: alpha(colors.success, 0.3),
+  },
+  statusTagLate: {
+    backgroundColor: alpha(colors.error, 0.15),
+    borderColor: alpha(colors.error, 0.3),
+  },
+  statusTagUnpaid: {
+    backgroundColor: alpha(colors.warning, 0.15),
+    borderColor: alpha(colors.warning, 0.3),
+  },
+  statusTagText: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  // Tab Content
+  tabContent: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: 120,
+  },
+  tabView: {
+    flex: 1,
+  },
+  // Info Tab
+  infoListContainer: {
+    marginTop: spacing.sm,
+  },
+  infoListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.bgSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  infoListItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgTertiary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.md,
   },
-  buttonPrimary: {
-    backgroundColor: colors.primary,
+  infoListItemTitle: {
+    ...typography.body,
+    fontWeight: '500',
+    color: colors.textPrimary,
+    flex: 1,
   },
-  buttonOutline: {
-    backgroundColor: 'transparent',
+  infoListItemValue: {
+    ...typography.body,
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginLeft: spacing.md,
+    textAlign: 'right',
+    maxWidth: '40%',
+  },
+  credentialValueContainer: {
+    marginLeft: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    maxWidth: '40%',
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPrimaryText: {
-    color: colors.textPrimary,
+  credentialValue: {
+    ...typography.body,
+    fontSize: 13,
     fontWeight: '600',
-    fontSize: 16,
-  },
-  buttonOutlineText: {
     color: colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  detailsGrid: {
-    marginTop: spacing.md,
+  infoSection: {
+    padding: spacing.md,
   },
-  detailItem: {
-    marginBottom: spacing.md,
+  infoRow: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: alpha(colors.border, 0.5),
   },
-  detailLabel: {
+  infoLabel: {
     ...typography.caption,
-    marginBottom: spacing.xs,
+    fontSize: 12,
     fontWeight: '600',
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
   },
-  detailValue: {
+  infoValue: {
     ...typography.body,
     fontSize: 16,
+    fontWeight: '500',
   },
-  detailValueMonospace: {
-    ...typography.body,
-    fontSize: 16,
-    fontFamily: 'monospace',
-  },
-  detailValueLarge: {
+  infoValueLarge: {
     ...typography.h2,
     fontSize: 24,
     color: colors.primary,
   },
-  detailValueMuted: {
-    ...typography.caption,
-    fontStyle: 'italic',
-  },
-  detailValueNotes: {
+  infoValueNotes: {
     ...typography.body,
     fontSize: 14,
     lineHeight: 20,
+    color: colors.textSecondary,
   },
   credentialBadge: {
     backgroundColor: colors.bgTertiary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     alignSelf: 'flex-start',
@@ -229,122 +314,225 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  recordPaymentButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    ...shadows.md,
-  },
-  recordPaymentButtonText: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  emptyState: {
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-  },
-  emptyStateSubtext: {
-    ...typography.caption,
-    textAlign: 'center',
-  },
-  paymentItem: {
-    backgroundColor: colors.bgTertiary,
-    borderRadius: 12,
+  // Attendance Tab
+  attendanceStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
     padding: spacing.md,
-    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  attendanceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  paymentHeader: {
+  attendanceItemPresent: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
+  },
+  attendanceItemAbsent: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.error,
+  },
+  attendanceItemLeft: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    flex: 1,
+  },
+  attendanceItemInfo: {
+    marginLeft: spacing.md,
+    flex: 1,
+  },
+  attendanceDate: {
+    ...typography.body,
+    fontWeight: '600',
+    fontSize: 16,
+    marginBottom: spacing.xs,
+  },
+  attendanceSignature: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  attendanceStatusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  attendanceStatusBadgePresent: {
+    backgroundColor: alpha(colors.success, 0.15),
+    borderWidth: 1,
+    borderColor: alpha(colors.success, 0.3),
+  },
+  attendanceStatusBadgeAbsent: {
+    backgroundColor: alpha(colors.error, 0.15),
+    borderWidth: 1,
+    borderColor: alpha(colors.error, 0.3),
+  },
+  attendanceStatusText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  // Payments Tab
+  paymentsHeader: {
+    padding: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  filterChips: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    ...typography.body,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#0B0F0D',
+  },
+  paymentRow: {
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  paymentInfo: {
     marginBottom: spacing.sm,
   },
   paymentDate: {
     ...typography.body,
     fontWeight: '600',
     fontSize: 16,
+    marginBottom: spacing.xs,
+  },
+  paymentMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   paymentStatusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
   },
   paymentStatusBadgePaid: {
-    backgroundColor: `${colors.success}20`,
+    backgroundColor: alpha(colors.success, 0.15),
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: alpha(colors.success, 0.3),
   },
   paymentStatusBadgePartial: {
-    backgroundColor: `${colors.warning}20`,
+    backgroundColor: alpha(colors.warning, 0.15),
     borderWidth: 1,
-    borderColor: colors.warning,
+    borderColor: alpha(colors.warning, 0.3),
   },
   paymentStatusBadgeUnpaid: {
-    backgroundColor: `${colors.error}20`,
+    backgroundColor: alpha(colors.error, 0.15),
     borderWidth: 1,
+    borderColor: alpha(colors.error, 0.3),
+  },
+  paymentStatusBadgeLate: {
+    backgroundColor: alpha(colors.error, 0.25),
     borderColor: colors.error,
   },
   paymentStatusText: {
-    fontSize: 12,
+    ...typography.caption,
+    fontSize: 11,
     fontWeight: '600',
+  },
+  paymentStatusTextPaid: {
+    color: colors.success,
+  },
+  paymentStatusTextPartial: {
+    color: colors.warning,
+  },
+  paymentStatusTextUnpaid: {
+    color: colors.error,
+  },
+  paymentStatusTextLate: {
+    color: colors.error,
+    fontWeight: '700',
+  },
+  paymentAmount: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
+  },
+  paymentOutstanding: {
+    ...typography.h3,
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
-  paymentAmounts: {
-    marginBottom: spacing.md,
+  paymentOutstandingLate: {
+    color: colors.error,
   },
-  paymentAmountItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  paymentAmountLabel: {
+  paymentDetail: {
     ...typography.caption,
-  },
-  paymentAmountValue: {
-    ...typography.body,
-    fontWeight: '600',
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   paymentActions: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   paymentActionButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+    padding: spacing.sm,
+    borderRadius: radius.sm,
     alignItems: 'center',
-    borderWidth: 1,
+    justifyContent: 'center',
+    minWidth: 40,
   },
   paymentActionButtonEdit: {
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
     borderColor: colors.border,
   },
   paymentActionButtonDelete: {
-    backgroundColor: `${colors.error}20`,
-    borderColor: colors.error,
+    backgroundColor: alpha(colors.error, 0.15),
+    borderWidth: 1,
+    borderColor: alpha(colors.error, 0.3),
   },
   paymentActionButtonSave: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   paymentActionButtonCancel: {
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: colors.bgTertiary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
     borderColor: colors.border,
   },
   paymentActionButtonText: {
-    color: colors.textPrimary,
-    fontSize: 14,
+    ...typography.body,
+    fontSize: 13,
     fontWeight: '600',
+    color: colors.textPrimary,
   },
   paymentEditForm: {
     marginTop: spacing.sm,
@@ -358,12 +546,13 @@ export const styles = StyleSheet.create({
   paymentEditLabel: {
     ...typography.caption,
     marginBottom: spacing.xs,
+    fontWeight: '600',
   },
   paymentEditInput: {
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     padding: spacing.md,
     color: colors.textPrimary,
     fontSize: 16,
@@ -372,164 +561,200 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
+  // Notes Tab
+  notesContainer: {
+    padding: spacing.md,
+    paddingBottom: 120,
+  },
+  notesLabel: {
+    ...typography.label,
+    marginBottom: spacing.sm,
+  },
+  notesInput: {
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    color: colors.textPrimary,
+    fontSize: 14,
+    minHeight: 200,
+    textAlignVertical: 'top',
     marginBottom: spacing.md,
   },
-  attendanceItem: {
-    backgroundColor: colors.bgTertiary,
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+  saveNotesButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.sm,
+    gap: spacing.sm,
   },
-  attendanceItemPresent: {
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
-  },
-  attendanceItemAbsent: {
-    borderLeftWidth: 4,
-    borderLeftColor: colors.error,
-  },
-  attendanceDate: {
+  saveNotesButtonText: {
     ...typography.body,
     fontWeight: '600',
-    flex: 1,
+    color: '#ffffff',
   },
-  attendanceStatusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
-    marginHorizontal: spacing.sm,
-  },
-  attendanceStatusBadgePresent: {
-    backgroundColor: `${colors.success}20`,
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  attendanceStatusBadgeAbsent: {
-    backgroundColor: `${colors.error}20`,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  attendanceStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  attendanceSignature: {
-    ...typography.caption,
-    flex: 1,
-    textAlign: 'right',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.bgSecondary,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: '92%',
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 20,
-  },
-  modalHeader: {
+  // Floating Bottom Action Bar
+  bottomActionBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(18,18,22,0.92)',
+    borderRadius: 26,
+    padding: 10,
+    gap: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    ...(Platform.OS === 'android' && {
+      elevation: 12,
+    }),
+  },
+  primaryActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  primaryActionText: {
+    ...typography.body,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  secondaryActionBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 22,
+  },
+  // Menu Items
+  menuItem: {
+    flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    paddingTop: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    position: 'relative',
+    borderRadius: radius.sm,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.bgTertiary,
+    gap: spacing.md,
   },
-  modalHandle: {
-    position: 'absolute',
-    top: spacing.xs,
-    left: '50%',
-    marginLeft: -20,
-    width: 40,
-    height: 4,
-    backgroundColor: colors.textMuted,
-    borderRadius: 2,
-    opacity: 0.5,
+  menuItemDanger: {
+    backgroundColor: alpha(colors.error, 0.1),
   },
-  modalTitle: {
-    ...typography.h2,
-    fontSize: 20,
+  menuItemText: {
+    ...typography.body,
+    flex: 1,
+    fontWeight: '500',
   },
-  modalClose: {
-    fontSize: 24,
-    color: colors.textMuted,
-    fontWeight: '300',
+  menuItemTextDanger: {
+    color: colors.error,
   },
-  modalScroll: {
-    maxHeight: 400,
+  // Form Styles
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  formScroll: {
+    flex: 1,
+  },
+  formScrollContent: {
     paddingBottom: spacing.md,
   },
-  modalSubtitle: {
-    ...typography.caption,
-    padding: spacing.md,
-    paddingBottom: spacing.sm,
+  statusSegmentedControl: {
+    marginBottom: spacing.md,
   },
-  modalFooter: {
+  inputLabel: {
+    ...typography.label,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    color: colors.textPrimary,
+    fontSize: 16,
+    marginBottom: spacing.md,
+  },
+  inputHint: {
+    ...typography.caption,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+    color: colors.textMuted,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  formFooter: {
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  modalBtn: {
+  formBtn: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalBtnCancel: {
+  formBtnCancel: {
     backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalBtnPrimary: {
+  formBtnPrimary: {
     backgroundColor: colors.primary,
   },
-  modalBtnDisabled: {
+  formBtnDisabled: {
     opacity: 0.5,
   },
-  modalBtnText: {
-    color: colors.textPrimary,
+  formBtnText: {
+    ...typography.body,
     fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  formBtnTextPrimary: {
+    color: '#ffffff',
+  },
+  // Date Picker
+  dateInputButton: {
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    minHeight: 50,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  dateInputButtonText: {
+    color: colors.textPrimary,
     fontSize: 16,
   },
-  modalBtnTextPrimary: {
-    color: colors.textPrimary,
+  dateInputButtonTextPlaceholder: {
+    color: colors.textMuted,
+    fontSize: 16,
   },
-  datePickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  datePickerContent: {
+  datePickerContainer: {
     backgroundColor: colors.bgSecondary,
-    borderRadius: 16,
-    padding: spacing.lg,
-    width: '90%',
-    maxWidth: 400,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -537,21 +762,16 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   datePickerTitle: {
     ...typography.h3,
-    fontSize: 18,
-  },
-  datePickerClose: {
-    fontSize: 24,
-    color: colors.textMuted,
-    fontWeight: '300',
+    fontSize: 16,
   },
   datePickerInputs: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   datePickerInputGroup: {
     flex: 1,
@@ -560,13 +780,12 @@ export const styles = StyleSheet.create({
     ...typography.caption,
     marginBottom: spacing.xs,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   datePickerInput: {
     backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     padding: spacing.md,
     color: colors.textPrimary,
     fontSize: 18,
@@ -576,12 +795,39 @@ export const styles = StyleSheet.create({
   datePickerDoneButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
   },
   datePickerDoneButtonText: {
-    color: colors.textPrimary,
+    ...typography.body,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  // Empty States
+  emptyState: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    ...typography.body,
     fontSize: 16,
     fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  emptySubtext: {
+    ...typography.caption,
+    textAlign: 'center',
+    color: colors.textMuted,
+  },
+  emptyListContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 120,
+  },
+  listContent: {
+    paddingBottom: 120,
   },
 });

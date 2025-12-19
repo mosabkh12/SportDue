@@ -1,75 +1,134 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { colors, spacing, radius, typography } from '../../ui/tokens';
 
 export const styles = StyleSheet.create({
-  container: {
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  profileHeaderCard: {
+    marginBottom: spacing.lg,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  profileAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileInfo: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: colors.bgSecondary,
+  profileName: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  profileEmail: {
+    ...typography.body,
+    color: colors.textMuted,
+  },
+  sectionCard: {
+    marginBottom: spacing.lg,
+  },
+  toggleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
+  toggleItemLast: {
+    borderBottomWidth: 0,
   },
-  card: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: 16,
-    padding: 20,
-    margin: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+  listItemNoBorder: {
+    borderBottomWidth: 0,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  toggleIcon: {
+    marginRight: spacing.md,
+  },
+  toggleContent: {
+    flex: 1,
+  },
+  toggleTitle: {
+    ...typography.body,
+    fontWeight: '500',
     color: colors.textPrimary,
-    marginBottom: 20,
+    marginBottom: spacing.xs,
+  },
+  toggleSubtitle: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  sheetContent: {
+    flex: 1,
+  },
+  sheetTitle: {
+    ...typography.h2,
+    marginBottom: spacing.lg,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  label: {
-    fontSize: 14,
+  inputLabel: {
+    ...typography.body,
     fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
   },
   input: {
     backgroundColor: colors.bgTertiary,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    ...typography.body,
     color: colors.textPrimary,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 48,
   },
   inputDisabled: {
     opacity: 0.6,
+    backgroundColor: colors.bgQuaternary,
+  },
+  inputHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  errorContainer: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.error + '15',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
   },
   errorText: {
+    ...typography.caption,
     color: colors.error,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 16,
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+  sheetFooter: {
+    flexDirection: 'row',
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  sheetButton: {
+    minHeight: 48,
   },
 });
-
-
