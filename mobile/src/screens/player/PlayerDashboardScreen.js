@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../services/apiClient';
 import StatCard from '../../components/StatCard';
@@ -224,12 +226,37 @@ const PlayerDashboardScreen = () => {
     };
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
+
   return (
     <AppScreen>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Player Portal</Text>
-          <Text style={styles.logoutText} onPress={logout}>Logout</Text>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.textPrimary} />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView

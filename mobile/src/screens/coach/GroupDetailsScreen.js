@@ -873,9 +873,9 @@ const GroupDetailsScreen = ({ route }) => {
         visible={showAddPlayer}
         onClose={handleCloseAddPlayer}
         title="Add player"
-        snapHeight={0.7}
+        snapHeight={0.75}
       >
-        <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+        <View>
           <Text style={styles.inputLabel}>Name *</Text>
           <TextInput
             style={styles.input}
@@ -909,26 +909,26 @@ const GroupDetailsScreen = ({ route }) => {
             autoCapitalize="none"
             autoCorrect={false}
           />
-        </ScrollView>
 
-        <View style={styles.formFooter}>
-          <TouchableOpacity
-            style={[styles.formBtn, styles.formBtnCancel]}
-            onPress={handleCloseAddPlayer}
-          >
-            <Text style={styles.formBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.formBtn, styles.formBtnPrimary, !playerForm.fullName?.trim() && styles.formBtnDisabled]}
-            onPress={handleAddPlayer}
-            disabled={submitting || !playerForm.fullName?.trim()}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={[styles.formBtnText, styles.formBtnTextPrimary]}>Add</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.formFooter}>
+            <TouchableOpacity
+              style={[styles.formBtn, styles.formBtnCancel]}
+              onPress={handleCloseAddPlayer}
+            >
+              <Text style={styles.formBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.formBtn, styles.formBtnPrimary, !playerForm.fullName?.trim() && styles.formBtnDisabled]}
+              onPress={handleAddPlayer}
+              disabled={submitting || !playerForm.fullName?.trim()}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.formBtnText, styles.formBtnTextPrimary]}>Add</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </BottomSheet>
 

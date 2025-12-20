@@ -59,16 +59,57 @@ const CoachScheduleScreen = () => {
   }, [groups, selectedTeamFilter]);
 
   const getTimeForDate = (group, date) => {
+    // Helper to ensure time is a valid string in HH:MM format
+    const ensureTimeString = (timeValue) => {
+      if (!timeValue && timeValue !== 0) return null;
+      // Convert to string if it's a number
+      let timeStr = String(timeValue).trim();
+      // Remove any non-time characters
+      timeStr = timeStr.replace(/[^\d:]/g, '');
+      // Basic validation - should be HH:MM format (4-5 chars with colon)
+      if (timeStr.includes(':') && timeStr.length >= 4 && timeStr.length <= 5) {
+        const parts = timeStr.split(':');
+        if (parts.length === 2 && parts[0].length <= 2 && parts[1].length === 2) {
+          return timeStr;
+        }
+      }
+      return null;
+    };
+
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
-    if (group.dateTimes && group.dateTimes[dateKey]) {
+    // 1. First check for specific date time (YYYY-MM-DD format)
+    if (group.dateTimes && typeof group.dateTimes === 'object' && group.dateTimes[dateKey]) {
       const time = group.dateTimes[dateKey];
-      if (time.startTime || time.endTime) {
-        return { startTime: time.startTime || group.trainingTime?.startTime || '18:00', endTime: time.endTime || group.trainingTime?.endTime || '19:30' };
+      if (time && typeof time === 'object') {
+        const startTime = ensureTimeString(time.startTime);
+        const endTime = ensureTimeString(time.endTime);
+        if (startTime && endTime) {
+          return { startTime, endTime };
+        }
       }
     }
     
-    return group.trainingTime || { startTime: '18:00', endTime: '19:30' };
+    // 2. Check for per-day time (day index as key: "0", "1", "2", etc.)
+    const dayKey = String(dayOfWeek);
+    if (group.dateTimes && typeof group.dateTimes === 'object' && group.dateTimes[dayKey]) {
+      const dayTime = group.dateTimes[dayKey];
+      if (dayTime && typeof dayTime === 'object') {
+        const startTime = ensureTimeString(dayTime.startTime);
+        const endTime = ensureTimeString(dayTime.endTime);
+        if (startTime && endTime) {
+          return { startTime, endTime };
+        }
+      }
+    }
+    
+    // 3. Fall back to default trainingTime
+    const defaultTime = group.trainingTime || { startTime: '18:00', endTime: '19:30' };
+    return {
+      startTime: ensureTimeString(defaultTime?.startTime) || '18:00',
+      endTime: ensureTimeString(defaultTime?.endTime) || '19:30',
+    };
   };
 
   const isDateCancelled = (group, date) => {
@@ -407,7 +448,7 @@ const CoachScheduleScreen = () => {
                               )}
                             </View>
                             <Text style={styles.sessionTime}>
-                              {session.time.startTime} - {session.time.endTime}
+                              {session.time?.startTime || '18:00'} - {session.time?.endTime || '19:30'}
                             </Text>
                           </View>
                           <View style={styles.sessionActions}>

@@ -125,7 +125,7 @@ const SectionHeader = ({ title, subtitle, rightAction }) => (
 
 const CoachHomeScreen = () => {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const notifications = useNotifications();
   const [groups, setGroups] = useState([]);
   const [coachProfile, setCoachProfile] = useState(null);
@@ -204,13 +204,38 @@ const CoachHomeScreen = () => {
           <Text style={styles.greeting}>Good {timeOfDay}, {coachName}</Text>
           <Text style={styles.date}>{formatDate(today)}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="person-circle" size={40} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-circle" size={40} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                'Logout',
+                'Are you sure you want to logout?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: logout,
+                  },
+                ]
+              );
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Next Session Card */}

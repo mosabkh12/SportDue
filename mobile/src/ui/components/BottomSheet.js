@@ -74,62 +74,70 @@ const BottomSheet = ({
       animationType="none"
       onRequestClose={handleClose}
     >
-      <TouchableWithoutFeedback onPress={handleClose}>
+      <View style={styles.modalContainer}>
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <Animated.View
+            style={[
+              styles.overlay,
+              {
+                opacity: opacityAnim,
+              },
+            ]}
+          />
+        </TouchableWithoutFeedback>
         <Animated.View
           style={[
-            styles.overlay,
+            styles.container,
             {
-              opacity: opacityAnim,
+              transform: [{ translateY: slideAnim }],
+              height: SCREEN_HEIGHT * snapHeight,
             },
           ]}
         >
-          <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                styles.container,
-                {
-                  transform: [{ translateY: slideAnim }],
-                  maxHeight: SCREEN_HEIGHT * snapHeight,
-                },
-              ]}
-            >
-              {/* Handle bar */}
-              <View style={styles.handleBar} />
-              
-              {/* Title */}
-              {title && (
-                <View style={styles.titleContainer}>
-                  <Text style={styles.title}>{title}</Text>
-                </View>
-              )}
+          {/* Handle bar */}
+          <View style={styles.handleBar} />
+          
+          {/* Title */}
+          {title && (
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>{title}</Text>
+            </View>
+          )}
 
-              {/* Content */}
-              <ScrollView 
-                style={styles.scrollView}
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-              >
-                {children}
-              </ScrollView>
-            </Animated.View>
-          </TouchableWithoutFeedback>
+          {/* Content */}
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
+            {children}
+          </ScrollView>
         </Animated.View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  modalContainer: {
     flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
   container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: colors.bgSecondary,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     ...shadow.lg,
+    overflow: 'hidden',
   },
   handleBar: {
     width: 40,
@@ -154,7 +162,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl * 3,
   },
 });
 

@@ -64,17 +64,48 @@ const GroupScheduleEditorScreen = ({ route }) => {
           setAddedDates(new Set(data.group.addedDates));
         }
         
-        // Load per-date times
+        // Load per-date times - clean up any invalid entries
+        // Separate dayTimes (keys like "0", "1", etc.) from actual dateTimes (YYYY-MM-DD format)
+        const loadedDayTimes = {};
         if (data.group.dateTimes && typeof data.group.dateTimes === 'object') {
-          setDateTimes(data.group.dateTimes);
+          const cleanedDateTimes = {};
+          
+          for (const [key, time] of Object.entries(data.group.dateTimes)) {
+            // Only keep entries with both times set
+            if (time && time.startTime && time.endTime && 
+                time.startTime.trim() !== '' && time.endTime.trim() !== '') {
+              // Check if key is a day index (0-6) or a date (YYYY-MM-DD)
+              if (/^\d+$/.test(key) && parseInt(key) >= 0 && parseInt(key) <= 6) {
+                // This is a day index (Sunday=0, Monday=1, etc.)
+                loadedDayTimes[parseInt(key)] = {
+                  startTime: time.startTime.trim(),
+                  endTime: time.endTime.trim(),
+                };
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+                // This is a date (YYYY-MM-DD format)
+                cleanedDateTimes[key] = {
+                  startTime: time.startTime.trim(),
+                  endTime: time.endTime.trim(),
+                };
+              }
+            }
+          }
+          
+          setDateTimes(cleanedDateTimes);
         }
         
         // Initialize dayTimes from trainingDays
+        // Use loaded dayTimes if available, otherwise use default
         const defaultTime = data.group.trainingTime || { startTime: '18:00', endTime: '19:30' };
         const days = data.group.trainingDays || [];
         const initialDayTimes = {};
         days.forEach((day) => {
-          initialDayTimes[day] = defaultTime;
+          // Use loaded dayTimes first, then default
+          if (loadedDayTimes[day] && loadedDayTimes[day].startTime && loadedDayTimes[day].endTime) {
+            initialDayTimes[day] = loadedDayTimes[day];
+          } else {
+            initialDayTimes[day] = defaultTime;
+          }
         });
         setDayTimes(initialDayTimes);
       }
@@ -89,106 +120,28 @@ const GroupScheduleEditorScreen = ({ route }) => {
     fetchGroup();
   }, [fetchGroup]);
 
-  // Helper: Convert time string to minutes
-  const timeToMinutes = (timeStr) => {
-    if (!timeStr) return 0;
+  // Validate time format (HH:MM)
+  const isValidTimeFormat = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return false;
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(timeStr);
+  };
+
+  // Validate time values (hours 0-23, minutes 0-59)
+  const isValidTime = (timeStr) => {
+    if (!isValidTimeFormat(timeStr)) return false;
     const [hours, minutes] = timeStr.split(':').map(Number);
-    return (hours || 0) * 60 + (minutes || 0);
+    return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
   };
 
-  // Helper: Check if time ranges overlap
-  const timeRangesOverlap = (start1, end1, start2, end2) => {
-    const start1Min = timeToMinutes(start1);
-    const end1Min = timeToMinutes(end1);
-    const start2Min = timeToMinutes(start2);
-    const end2Min = timeToMinutes(end2);
-    return (start1Min < end2Min && end1Min > start2Min);
-  };
-
-  // Check for time conflicts
-  const checkTimeConflicts = async () => {
-    try {
-      const { data: allGroups } = await apiClient.get('/groups');
-      
-      const scheduleTime = trainingTime;
-      const conflicts = [];
-
-      // Get all dates that will have training (recurring + added, excluding cancelled)
-      const trainingDates = new Set();
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const twoYearsLater = new Date(today);
-      twoYearsLater.setFullYear(twoYearsLater.getFullYear() + 2);
-      
-      trainingDays.forEach((dayIndex) => {
-        const checkDate = new Date(today);
-        const daysUntilNext = (dayIndex - checkDate.getDay() + 7) % 7;
-        if (daysUntilNext > 0) {
-          checkDate.setDate(checkDate.getDate() + daysUntilNext);
-        }
-        
-        while (checkDate <= twoYearsLater) {
-          const dateKey = getDateKey(checkDate);
-          if (!cancelledDates.has(dateKey)) {
-            trainingDates.add(dateKey);
-          }
-          checkDate.setDate(checkDate.getDate() + 7);
-        }
-      });
-
-      addedDates.forEach((dateKey) => {
-        trainingDates.add(dateKey);
-      });
-
-      // Check each training date for conflicts
-      for (const dateKey of trainingDates) {
-        const [year, month, day] = dateKey.split('-').map(Number);
-        const checkDate = new Date(year, month - 1, day);
-        
-        const timeForDate = dateTimes[dateKey] || dayTimes[checkDate.getDay()] || trainingTime;
-        const startTime = timeForDate.startTime || trainingTime.startTime || '18:00';
-        const endTime = timeForDate.endTime || trainingTime.endTime || '19:30';
-
-        for (const otherGroup of allGroups) {
-          if (otherGroup._id === groupId) continue;
-          
-          if (!otherGroup.trainingDays || !Array.isArray(otherGroup.trainingDays)) continue;
-          
-          const dayOfWeek = checkDate.getDay();
-          const otherGroupHasDay = otherGroup.trainingDays.includes(dayOfWeek);
-          const otherGroupHasAdded = otherGroup.addedDates && 
-            Array.isArray(otherGroup.addedDates) && 
-            otherGroup.addedDates.includes(dateKey);
-          const otherGroupCancelled = otherGroup.cancelledDates && 
-            Array.isArray(otherGroup.cancelledDates) && 
-            otherGroup.cancelledDates.includes(dateKey);
-          
-          if ((otherGroupHasDay || otherGroupHasAdded) && !otherGroupCancelled) {
-            const otherDateTimes = otherGroup.dateTimes || {};
-            const otherTimeForDate = otherDateTimes[dateKey] || otherGroup.trainingTime || { startTime: '18:00', endTime: '19:30' };
-            const otherStartTime = otherTimeForDate.startTime || '18:00';
-            const otherEndTime = otherTimeForDate.endTime || '19:30';
-
-            if (timeRangesOverlap(startTime, endTime, otherStartTime, otherEndTime)) {
-              conflicts.push({
-                date: `${day}/${month}/${year}`,
-                dateKey,
-                otherGroupName: otherGroup.name,
-                time: `${startTime} - ${endTime}`,
-                otherTime: `${otherStartTime} - ${otherEndTime}`,
-              });
-              break;
-            }
-          }
-        }
-      }
-
-      return conflicts;
-    } catch (err) {
-      console.error('Error checking conflicts:', err);
-      return [];
-    }
+  // Validate that start time is before end time
+  const isValidTimeRange = (startTime, endTime) => {
+    if (!isValidTime(startTime) || !isValidTime(endTime)) return false;
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    return startMinutes < endMinutes;
   };
 
   const handleUpdateSchedule = async () => {
@@ -197,48 +150,94 @@ const GroupScheduleEditorScreen = ({ route }) => {
       return;
     }
 
-    setSaving(true);
-    try {
-      // Check for time conflicts before saving
-      const conflicts = await checkTimeConflicts();
-      
-      if (conflicts.length > 0) {
-        const conflictList = conflicts.map(c => 
-          `${c.date}: Conflict with "${c.otherGroupName}" (${c.time})`
-        ).join('\n');
-        
-        notifications.error(
-          `⚠️ Time conflict detected!\n\n${conflictList}\n\nCannot schedule training at the same time on the same date. Please adjust the schedule.`,
-          { duration: 8000 }
-        );
-        setSaving(false);
+    // Validate that each training day has a valid time
+    for (const dayIndex of trainingDays) {
+      const dayTime = dayTimes[dayIndex];
+      if (!dayTime || !dayTime.startTime || !dayTime.endTime) {
+        notifications.error(`Please set a time for ${dayNames[dayIndex]}`);
         return;
       }
+      if (!isValidTime(dayTime.startTime)) {
+        notifications.error(`Invalid start time for ${dayNames[dayIndex]}. Use HH:MM format (e.g., 18:00)`);
+        return;
+      }
+      if (!isValidTime(dayTime.endTime)) {
+        notifications.error(`Invalid end time for ${dayNames[dayIndex]}. Use HH:MM format (e.g., 19:30)`);
+        return;
+      }
+      if (!isValidTimeRange(dayTime.startTime, dayTime.endTime)) {
+        notifications.error(`End time must be after start time for ${dayNames[dayIndex]}`);
+        return;
+      }
+    }
 
-      // Filter out empty dateTimes entries
+    // Don't validate dateTimes - users can set any time they want
+    // Invalid entries will be filtered out when saving
+
+    setSaving(true);
+    try {
+
+      // Store dayTimes in dateTimes using day indices as keys (e.g., "0" for Sunday, "1" for Monday)
+      // This allows us to preserve individual day times on the server
+      // Ensure all times are valid strings in HH:MM format
+      const dayTimesForServer = {};
+      trainingDays.forEach((dayIndex) => {
+        const dayTime = dayTimes[dayIndex];
+        if (dayTime && dayTime.startTime && dayTime.endTime) {
+          // Convert to string and clean
+          const startTime = String(dayTime.startTime).trim();
+          const endTime = String(dayTime.endTime).trim();
+          // Only save if both are valid (non-empty and contain colon)
+          if (startTime !== '' && endTime !== '' && 
+              startTime.includes(':') && endTime.includes(':')) {
+            dayTimesForServer[String(dayIndex)] = {
+              startTime: startTime,
+              endTime: endTime,
+            };
+          }
+        }
+      });
+
+      // Filter out empty dateTimes entries - only keep entries with both times set
+      // Don't validate format - let users set any time they want
+      // Exclude day indices (0-6) from dateTimes since we store them separately
       const filteredDateTimes = Object.keys(dateTimes).reduce((acc, key) => {
+        // Skip day indices (they're stored in dayTimesForServer)
+        if (/^\d+$/.test(key) && parseInt(key) >= 0 && parseInt(key) <= 6) {
+          return acc;
+        }
         const time = dateTimes[key];
-        if (time && (time.startTime || time.endTime)) {
+        // Only include if both times are set (non-empty strings)
+        if (time && time.startTime && time.endTime && 
+            time.startTime.trim() !== '' && time.endTime.trim() !== '') {
           acc[key] = {
-            startTime: time.startTime || '',
-            endTime: time.endTime || '',
+            startTime: time.startTime.trim(),
+            endTime: time.endTime.trim(),
           };
         }
         return acc;
       }, {});
+
+      // Merge dayTimes with dateTimes for server
+      const allDateTimes = { ...dayTimesForServer, ...filteredDateTimes };
       
+      // Calculate a default trainingTime from dayTimes (for backward compatibility)
+      const defaultTrainingTime = trainingDays.length > 0 && dayTimes[trainingDays[0]]
+        ? dayTimes[trainingDays[0]]
+        : { startTime: '18:00', endTime: '19:30' };
+
       await apiClient.put(`/groups/${groupId}`, {
         trainingDays: trainingDays,
-        trainingTime: trainingTime,
+        trainingTime: defaultTrainingTime, // Keep for backward compatibility
         cancelledDates: Array.from(cancelledDates),
         addedDates: Array.from(addedDates),
-        dateTimes: Object.keys(filteredDateTimes).length > 0 ? filteredDateTimes : undefined,
+        dateTimes: Object.keys(allDateTimes).length > 0 ? allDateTimes : undefined,
       });
       
       const dayNamesStr = trainingDays.map(
-        (d) => dayNames[d]
+        (d) => `${dayNames[d]} (${dayTimes[d]?.startTime || 'N/A'}-${dayTimes[d]?.endTime || 'N/A'})`
       ).join(', ');
-      let message = `Training schedule updated: ${dayNamesStr} from ${trainingTime.startTime} to ${trainingTime.endTime}`;
+      let message = `Training schedule updated: ${dayNamesStr}`;
       if (cancelledDates.size > 0) {
         message += `\n${cancelledDates.size} date(s) cancelled`;
       }
@@ -248,7 +247,6 @@ const GroupScheduleEditorScreen = ({ route }) => {
       notifications.success(message);
       fetchGroup();
       setModifiedDays(new Set());
-      setSelectedDayForTime(null);
       setSelectedDate(null);
       setSelectedDateForTime(null);
     } catch (err) {
@@ -269,14 +267,12 @@ const GroupScheduleEditorScreen = ({ route }) => {
       const newModifiedDays = new Set(modifiedDays);
       newModifiedDays.add(dayIndex);
       setModifiedDays(newModifiedDays);
-      if (selectedDayForTime === dayIndex) {
-        setSelectedDayForTime(null);
-      }
     } else {
       setTrainingDays([...trainingDays, dayIndex].sort((a, b) => a - b));
+      // Initialize with empty time - user must set it
       setDayTimes((prev) => ({
         ...prev,
-        [dayIndex]: trainingTime,
+        [dayIndex]: { startTime: '', endTime: '' },
       }));
       const newModifiedDays = new Set(modifiedDays);
       newModifiedDays.add(dayIndex);
@@ -393,7 +389,8 @@ const GroupScheduleEditorScreen = ({ route }) => {
       return dayTimes[dayOfWeek];
     }
     
-    return trainingTime;
+    // Return empty time if no day time is set
+    return { startTime: '', endTime: '' };
   };
 
   const handleDateClick = (date) => {
@@ -430,12 +427,7 @@ const GroupScheduleEditorScreen = ({ route }) => {
     } else if (isSelected && !isCancelled && !isAdded) {
       setSelectedDateForTime(date);
       setSelectedDate(date);
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingTime,
-        }));
-      }
+      // Don't initialize dateTimes - let it use the day's time automatically
       setLastTap({ date: dateKey, time: now });
     } else if (isCancelled) {
       const newCancelled = new Set(cancelledDates);
@@ -446,25 +438,15 @@ const GroupScheduleEditorScreen = ({ route }) => {
     } else if (isAdded) {
       setSelectedDateForTime(date);
       setSelectedDate(date);
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingTime,
-        }));
-      }
+      // Don't initialize dateTimes - let it use the day's time automatically
       setLastTap({ date: dateKey, time: now });
     } else {
       const newAdded = new Set(addedDates);
       newAdded.add(dateKey);
       setAddedDates(newAdded);
       setSelectedDateForTime(date);
-      if (!dateTimes[dateKey]) {
-        setDateTimes((prev) => ({
-          ...prev,
-          [dateKey]: trainingTime,
-        }));
-      }
       setSelectedDate(date);
+      // Don't initialize dateTimes - let it use the day's time automatically
       setLastTap({ date: dateKey, time: now });
     }
   };
@@ -532,73 +514,57 @@ const GroupScheduleEditorScreen = ({ route }) => {
           )}
         </AppCard>
 
-        {/* Default Training Time */}
-        <AppCard title="Default Training Time" style={styles.sectionCard}>
-          <Text style={styles.sectionHint}>
-            Default time for all training sessions. You can set custom times for specific days or dates below.
-          </Text>
-          <View style={styles.timeInputRow}>
-            <View style={styles.timeInputGroup}>
-              <Text style={styles.timeLabel}>Start Time</Text>
-              <TextInput
-                style={styles.timeInput}
-                value={trainingTime.startTime}
-                onChangeText={(value) => setTrainingTime({ ...trainingTime, startTime: value })}
-                placeholder="18:00"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-            <View style={styles.timeInputGroup}>
-              <Text style={styles.timeLabel}>End Time</Text>
-              <TextInput
-                style={styles.timeInput}
-                value={trainingTime.endTime}
-                onChangeText={(value) => setTrainingTime({ ...trainingTime, endTime: value })}
-                placeholder="19:30"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
-        </AppCard>
-
-        {/* Per-Day Time Overrides */}
-        {selectedDayForTime !== null && trainingDays.includes(selectedDayForTime) && (
-          <AppCard title={`Time for ${dayNames[selectedDayForTime]}`} style={styles.sectionCard}>
-            <View style={styles.timeInputRow}>
-              <View style={styles.timeInputGroup}>
-                <Text style={styles.timeLabel}>Start Time</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  value={dayTimes[selectedDayForTime]?.startTime || trainingTime.startTime}
-                  onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'startTime', value)}
-                  placeholder="18:00"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.timeInputGroup}>
-                <Text style={styles.timeLabel}>End Time</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  value={dayTimes[selectedDayForTime]?.endTime || trainingTime.endTime}
-                  onChangeText={(value) => handleDayTimeChange(selectedDayForTime, 'endTime', value)}
-                  placeholder="19:30"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => {
-                setDayTimes((prev) => {
-                  const updated = { ...prev };
-                  delete updated[selectedDayForTime];
-                  return updated;
-                });
-                setSelectedDayForTime(null);
-              }}
-            >
-              <Text style={styles.removeButtonText}>Remove custom time</Text>
-            </TouchableOpacity>
+        {/* Training Times for Each Day */}
+        {trainingDays.length > 0 && (
+          <AppCard title="Training Times" style={styles.sectionCard}>
+            <Text style={styles.sectionHint}>
+              Set the training time for each selected day. Format: HH:MM (e.g., 18:00)
+            </Text>
+            {trainingDays.map((dayIndex) => {
+              const dayTime = dayTimes[dayIndex] || { startTime: '', endTime: '' };
+              const hasValidTime = dayTime.startTime && dayTime.endTime && 
+                isValidTime(dayTime.startTime) && isValidTime(dayTime.endTime) &&
+                isValidTimeRange(dayTime.startTime, dayTime.endTime);
+              
+              return (
+                <View key={dayIndex} style={styles.dayTimeSection}>
+                  <Text style={styles.dayTimeTitle}>{dayNames[dayIndex]}</Text>
+                  <View style={styles.timeInputRow}>
+                    <View style={styles.timeInputGroup}>
+                      <Text style={styles.timeLabel}>Start Time *</Text>
+                      <TextInput
+                        style={[
+                          styles.timeInput,
+                          !hasValidTime && dayTime.startTime && styles.timeInputError
+                        ]}
+                        value={dayTime.startTime}
+                        onChangeText={(value) => handleDayTimeChange(dayIndex, 'startTime', value)}
+                        placeholder="18:00"
+                        placeholderTextColor={colors.textMuted}
+                      />
+                    </View>
+                    <View style={styles.timeInputGroup}>
+                      <Text style={styles.timeLabel}>End Time *</Text>
+                      <TextInput
+                        style={[
+                          styles.timeInput,
+                          !hasValidTime && dayTime.endTime && styles.timeInputError
+                        ]}
+                        value={dayTime.endTime}
+                        onChangeText={(value) => handleDayTimeChange(dayIndex, 'endTime', value)}
+                        placeholder="19:30"
+                        placeholderTextColor={colors.textMuted}
+                      />
+                    </View>
+                  </View>
+                  {!hasValidTime && (dayTime.startTime || dayTime.endTime) && (
+                    <Text style={styles.timeErrorText}>
+                      Please enter valid times in HH:MM format (e.g., 18:00). End time must be after start time.
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </AppCard>
         )}
 

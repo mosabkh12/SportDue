@@ -19,12 +19,27 @@ export const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   profileButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgTertiary,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   nextSessionCard: {
     marginBottom: spacing.xl,

@@ -105,6 +105,28 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     minHeight: 48,
   },
+  dayTimeSection: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dayTimeTitle: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  timeInputError: {
+    borderColor: colors.error,
+    borderWidth: 1,
+  },
+  timeErrorText: {
+    ...typography.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
+    fontSize: 12,
+  },
   removeButton: {
     marginTop: spacing.md,
     padding: spacing.sm,

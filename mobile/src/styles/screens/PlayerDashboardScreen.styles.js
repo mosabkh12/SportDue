@@ -20,9 +20,20 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.bgTertiary || 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || 'rgba(255, 255, 255, 0.2)',
+  },
   logoutText: {
     color: colors.textPrimary,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   scrollView: {
